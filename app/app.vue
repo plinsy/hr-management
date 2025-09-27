@@ -1,5 +1,98 @@
 <template>
   <v-app>
+    <!-- Navigation Drawer (Sidebar) -->
+    <v-navigation-drawer
+      v-model="drawer"
+      :rail="rail && !mobile"
+      :temporary="mobile"
+      color="surface"
+      elevation="3"
+      app
+    >
+      <!-- Sidebar header -->
+      <div class="sidebar-header pa-4">
+        <div class="d-flex align-center">
+          <v-avatar 
+            :size="rail && !mobile ? 32 : 40" 
+            color="primary"
+            class="me-3"
+          >
+            <v-icon :size="rail && !mobile ? 'small' : 'default'" color="white">
+              mdi-office-building
+            </v-icon>
+          </v-avatar>
+          <div v-if="!rail || mobile" class="flex-grow-1">
+            <div class="text-h6 font-weight-bold">HR System</div>
+            <div class="text-caption text-medium-emphasis">{{ totalEmployees }} Employees</div>
+          </div>
+        </div>
+      </div>
+
+      <v-divider />
+
+      <!-- Navigation Menu -->
+      <v-list density="compact" nav>
+        <v-list-item
+          prepend-icon="mdi-calendar-account"
+          title="Calendar View"
+          value="calendar"
+          active
+          @click="activeSection = 'calendar'"
+        />
+        
+        <v-list-item
+          prepend-icon="mdi-account-group"
+          title="Employees"
+          value="employees"
+          @click="activeSection = 'employees'"
+        />
+        
+        <v-list-item
+          prepend-icon="mdi-chart-line"
+          title="Statistics"
+          value="statistics"
+          @click="handleViewStats"
+        />
+        
+        <v-list-item
+          prepend-icon="mdi-cog"
+          title="Settings"
+          value="settings"
+          @click="activeSection = 'settings'"
+        />
+      </v-list>
+
+      <v-divider class="my-2" />
+
+      <!-- Quick Actions -->
+      <v-list density="compact">
+        <v-list-subheader v-if="!rail || mobile">Quick Actions</v-list-subheader>
+        
+        <v-list-item
+          prepend-icon="mdi-calendar-plus"
+          title="Add Absence"
+          @click="handleQuickAddAbsence"
+        />
+        
+        <v-list-item
+          prepend-icon="mdi-account-plus"
+          title="Add Employee"
+          @click="handleQuickAddEmployee"
+        />
+      </v-list>
+
+      <!-- Rail toggle button -->
+      <template v-slot:append v-if="!mobile">
+        <div class="pa-2">
+          <v-btn
+            :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+            variant="text"
+            @click="rail = !rail"
+          />
+        </div>
+      </template>
+    </v-navigation-drawer>
+
     <!-- App bar -->
     <v-app-bar 
       color="primary" 
@@ -7,9 +100,16 @@
       elevation="2"
       app
     >
+      <!-- Mobile menu button -->
+      <v-app-bar-nav-icon
+        v-if="mobile"
+        @click="drawer = !drawer"
+      />
+
       <v-app-bar-title class="d-flex align-center">
         <v-icon class="me-2" size="large">mdi-calendar-account</v-icon>
-        <span class="text-h5 font-weight-bold">HR Management</span>
+        <span class="text-h5 font-weight-bold d-none d-sm-flex">HR Management</span>
+        <span class="text-h6 font-weight-bold d-sm-none">HR</span>
         <v-chip 
           class="ml-4" 
           color="secondary" 
@@ -30,14 +130,15 @@
         variant="outlined"
         density="compact"
         hide-details
-        class="year-selector me-4"
+        class="year-selector me-4 d-none d-md-flex"
         style="max-width: 120px;"
       />
 
       <!-- Actions -->
       <div class="d-flex align-center ga-2">
-        <!-- Stats chip -->
+        <!-- Stats chip - hidden on mobile -->
         <v-chip 
+          v-if="!mobile"
           color="secondary" 
           variant="tonal"
           prepend-icon="mdi-account-group"
@@ -51,9 +152,10 @@
           variant="elevated"
           @click="scrollToToday"
           :disabled="isLoading"
+          :size="mobile ? 'small' : 'default'"
         >
-          <v-icon start>mdi-calendar-today</v-icon>
-          Today
+          <v-icon :start="!mobile">mdi-calendar-today</v-icon>
+          <span v-if="!mobile">Today</span>
         </v-btn>
 
         <!-- Refresh button -->
@@ -62,6 +164,7 @@
           variant="text"
           @click="refreshData"
           :loading="isLoading"
+          :size="mobile ? 'small' : 'default'"
         />
       </div>
     </v-app-bar>
@@ -102,52 +205,6 @@
             @cell-click="handleCellClick"
           />
         </div>
-
-        <!-- Floating action button for quick actions -->
-        <v-fab
-          v-if="!isLoading"
-          icon="mdi-plus"
-          location="bottom end"
-          color="primary"
-          size="large"
-          @click="showQuickActions = !showQuickActions"
-        />
-
-        <!-- Quick actions menu -->
-        <v-menu
-          v-model="showQuickActions"
-          :close-on-content-click="false"
-          location="top end"
-          origin="bottom end"
-          offset="10"
-        >
-          <template #activator="{ props }">
-            <span></span>
-          </template>
-          
-          <v-card min-width="200">
-            <v-list>
-              <v-list-item
-                prepend-icon="mdi-calendar-plus"
-                title="Add Absence"
-                subtitle="Create new absence"
-                @click="handleQuickAddAbsence"
-              />
-              <v-list-item
-                prepend-icon="mdi-account-plus"
-                title="Add Employee"
-                subtitle="Add new employee"
-                @click="handleQuickAddEmployee"
-              />
-              <v-list-item
-                prepend-icon="mdi-chart-line"
-                title="View Stats"
-                subtitle="Show statistics"
-                @click="handleViewStats"
-              />
-            </v-list>
-          </v-card>
-        </v-menu>
       </div>
 
       <!-- Absence Dialog -->
@@ -226,6 +283,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useDisplay } from 'vuetify'
 import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence, AbsenceDialogData } from '~/types'
 import { getCurrentYear } from '~/utils/dateUtils'
@@ -237,11 +295,19 @@ import AbsenceDialog from './components/AbsenceDialog.vue'
  * Features responsive design, virtual scrolling calendar, and absence management
  */
 
+// Composables
+const { mobile } = useDisplay()
+
 // Store
 const employeeStore = useEmployeeStore()
 
 // Refs
 const calendarRef = ref<InstanceType<typeof CalendarTable>>()
+
+// Sidebar state
+const drawer = ref(!mobile.value)
+const rail = ref(false)
+const activeSection = ref('calendar')
 
 // Reactive state
 const selectedYear = ref(getCurrentYear())
@@ -249,7 +315,6 @@ const isInitializing = ref(true)
 const error = ref<string | null>(null)
 const successMessage = ref('')
 const showSuccessMessage = ref(false)
-const showQuickActions = ref(false)
 const showStatsDialog = ref(false)
 
 // Dialog state
@@ -394,8 +459,6 @@ const showSuccess = (message: string) => {
  * Handle quick add absence
  */
 const handleQuickAddAbsence = () => {
-  showQuickActions.value = false
-  
   // Use first employee and today's date as defaults
   const employees = employeeStore.getAllEmployees
   if (employees.length > 0) {
@@ -412,7 +475,6 @@ const handleQuickAddAbsence = () => {
  * Handle quick add employee
  */
 const handleQuickAddEmployee = () => {
-  showQuickActions.value = false
   // In a real app, this would open an employee creation dialog
   showSuccess('Employee creation not implemented in this demo')
 }
@@ -421,7 +483,6 @@ const handleQuickAddEmployee = () => {
  * Handle view stats
  */
 const handleViewStats = () => {
-  showQuickActions.value = false
   showStatsDialog.value = true
 }
 
@@ -432,6 +493,16 @@ watch(selectedYear, () => {
     scrollToToday()
   })
 })
+
+// Mobile responsiveness
+watch(mobile, (newVal) => {
+  if (newVal) {
+    drawer.value = false
+    rail.value = false
+  } else {
+    drawer.value = true
+  }
+}, { immediate: true })
 
 // Lifecycle
 onMounted(async () => {
@@ -469,6 +540,10 @@ useHead({
   margin: 16px;
 }
 
+.sidebar-header {
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.12);
+}
+
 .year-selector :deep(.v-field) {
   background-color: rgba(255, 255, 255, 0.1);
 }
@@ -486,24 +561,25 @@ useHead({
   backdrop-filter: blur(10px);
 }
 
+/* Navigation drawer customizations */
+.v-navigation-drawer {
+  border-right: 1px solid rgba(var(--v-border-color), 0.12);
+}
+
 /* Responsive design */
 @media (max-width: 960px) {
   .calendar-wrapper {
     margin: 8px;
-  }
-  
-  .v-app-bar-title span {
-    display: none;
-  }
-  
-  .year-selector {
-    display: none;
   }
 }
 
 @media (max-width: 600px) {
   .calendar-wrapper {
     margin: 4px;
+  }
+  
+  .sidebar-header {
+    padding: 12px !important;
   }
 }
 
@@ -514,6 +590,10 @@ useHead({
 
 /* Smooth transitions */
 .v-main {
+  transition: all 0.3s ease;
+}
+
+.v-navigation-drawer {
   transition: all 0.3s ease;
 }
 
@@ -540,5 +620,19 @@ useHead({
 
 :deep(.calendar-body::-webkit-scrollbar-thumb:hover) {
   background: #64b5f6;
+}
+
+/* Sidebar hover effects */
+.v-list-item {
+  transition: all 0.2s ease;
+}
+
+.v-list-item:hover {
+  background-color: rgba(var(--v-theme-primary), 0.08);
+}
+
+/* Rail mode adjustments */
+.v-navigation-drawer--rail .v-list-item {
+  padding-inline: 8px;
 }
 </style>
