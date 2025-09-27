@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterAll } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createVuetify } from 'vuetify'
 import { setActivePinia, createPinia } from 'pinia'
 import AbsenceDialog from '~/components/AbsenceDialog.vue'
 import { useEmployeeStore } from '~/stores/employees'
-import type { AbsenceDialogData, Employee } from '~/types'
+import { AbsenceType, type AbsenceDialogData, type Employee } from '~/types'
 
 // Mock the employee store
 const mockEmployee: Employee = {
@@ -90,7 +90,7 @@ describe('AbsenceDialog', () => {
         employeeId: 'emp1',
         startDate: '2024-01-15',
         endDate: '2024-01-17',
-        type: 'sick' as const,
+        type: AbsenceType.SICK,
         reason: 'Flu',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z'
@@ -249,7 +249,7 @@ describe('AbsenceDialog', () => {
     })
   })
 
-  afterEach(() => {
+  afterAll(() => {
     if (wrapper) {
       wrapper.unmount()
     }

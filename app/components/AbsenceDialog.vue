@@ -82,7 +82,7 @@
                   <template #item="{ props, item }">
                     <v-list-item
                       v-bind="props"
-                      :prepend-icon="getAbsenceTypeIcon(item.raw.value)"
+                      :prepend-icon="getAbsenceTypeIcon(item.raw.value as AbsenceType)"
                     />
                   </template>
                 </v-select>

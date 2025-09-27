@@ -49,6 +49,18 @@ const absenceReasons = [
 ]
 
 /**
+ * Format date as YYYY-MM-DD in local timezone
+ * @param date - Date to format
+ * @returns Formatted date string
+ */
+function formatDateLocal(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * Generate a random date within the current year
  * @param startMonth - Optional start month (0-11)
  * @param endMonth - Optional end month (0-11)
@@ -81,8 +93,8 @@ function generateAbsences(employeeId: string, count?: number): Absence[] {
     const absence: Absence = {
       id: `absence_${employeeId}_${i}_${Date.now()}`,
       employeeId,
-      startDate: startDate.toISOString().split('T')[0]!,
-      endDate: endDate.toISOString().split('T')[0]!,
+      startDate: formatDateLocal(startDate),
+      endDate: formatDateLocal(endDate),
       type: absenceTypes[Math.floor(Math.random() * absenceTypes.length)]!,
       reason: Math.random() > 0.3 ? absenceReasons[Math.floor(Math.random() * absenceReasons.length)] : undefined,
       createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(), // Created within last 30 days
@@ -155,8 +167,8 @@ export function generateAbsence(
   return {
     id: `absence_${employeeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     employeeId,
-    startDate: start.toISOString().split('T')[0]!,
-    endDate: end.toISOString().split('T')[0]!,
+    startDate: formatDateLocal(start),
+    endDate: formatDateLocal(end),
     type: type || absenceTypes[Math.floor(Math.random() * absenceTypes.length)]!,
     reason: Math.random() > 0.3 ? absenceReasons[Math.floor(Math.random() * absenceReasons.length)] : undefined,
     createdAt: new Date().toISOString(),

@@ -19,7 +19,7 @@ describe('virtualScrolling', () => {
       )
 
       expect(result.startIndex).toBe(0) // Math.max(0, Math.floor(100/50) - 5) = 0
-      expect(result.endIndex).toBe(14)  // Math.min(99, Math.ceil((100+400)/50) + 5) = 14
+      expect(result.endIndex).toBe(15)  // Math.min(99, Math.ceil((100+400)/50) + 5) = 14
       expect(result.totalHeight).toBe(5000) // 100 * 50
     })
 
@@ -50,7 +50,7 @@ describe('virtualScrolling', () => {
       )
 
       expect(result.startIndex).toBe(0) // Math.max(0, Math.floor(200/40) - 10) = 0
-      expect(result.endIndex).toBe(34)  // Math.min(364, Math.ceil((200+800)/40) + 10) = 34
+      expect(result.endIndex).toBe(35)  // Math.min(364, Math.ceil((200+800)/40) + 10) = 35
       expect(result.totalWidth).toBe(14600) // 365 * 40
     })
 

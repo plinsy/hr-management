@@ -229,8 +229,8 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence, AbsenceDialogData } from '~/types'
 import { getCurrentYear } from '~/utils/dateUtils'
-import CalendarTable from '~/components/CalendarTable'
-import AbsenceDialog from '~/components/AbsenceDialog'
+import type CalendarTable from './components/CalendarTable.vue'
+import AbsenceDialog from './components/AbsenceDialog.vue'
 
 /**
  * Main application component for HR Management System
@@ -401,7 +401,7 @@ const handleQuickAddAbsence = () => {
   if (employees.length > 0) {
     absenceDialogData.value = {
       isOpen: true,
-      employee: employees[0],
+      employee: employees[0]!,
       selectedDate: new Date(),
       editingAbsence: null
     }

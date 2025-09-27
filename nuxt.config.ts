@@ -7,8 +7,10 @@ export default defineNuxtConfig({
     'vuetify-nuxt-module'
   ],
   vuetify: {
-    theme: {
-      defaultTheme: 'light'
+    vuetifyOptions: {
+      theme: {
+        defaultTheme: 'light'
+      }
     }
   },
   css: [

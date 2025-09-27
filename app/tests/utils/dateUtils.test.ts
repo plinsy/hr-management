@@ -47,7 +47,7 @@ describe('dateUtils', () => {
 
   describe('formatDate', () => {
     const testDate = new Date(2024, 0, 15) // January 15, 2024
-
+    
     it('should format date in short format', () => {
       expect(formatDate(testDate, 'short')).toBe('01/15')
     })
