@@ -396,22 +396,27 @@ defineExpose({
   border-radius: 4px;
   overflow: hidden;
   background-color: #fff;
+  display: flex;
+  flex-direction: column;
 }
 
 .calendar-content {
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Fixed header styling */
 .fixed-header {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 10;
   background-color: #f5f5f5;
   border-bottom: 2px solid #e0e0e0;
   display: flex;
+  flex-shrink: 0;
 }
 
 .employee-columns {
@@ -516,6 +521,8 @@ defineExpose({
   position: relative;
   overflow: auto;
   background-color: #fff;
+  flex: 1;
+  min-height: 0;
 }
 
 .virtual-content {
