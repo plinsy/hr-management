@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-container" ref="containerRef">
+  <div class="calendar-container" ref="containerRef" :data-view-type="props.viewType">
     <!-- Loading overlay -->
     <v-overlay v-if="isLoading" class="align-center justify-center">
       <v-progress-circular
@@ -69,7 +69,8 @@
             :class="{ 'month-view': viewType === 'monthView' }"
             :style="{ 
               width: `${totalDateWidth}px`,
-              transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`
+              transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`,
+              // marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`
             }"
           >
             <div
@@ -144,7 +145,7 @@
               class="absence-cells"
               :class="{ 'month-view': viewType === 'monthView' }"
               :style="{ 
-                marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`,
+                // marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`,
                 transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`
               }"
             >
@@ -346,10 +347,9 @@ const visibleDates = computed(() => {
 const totalEmployeeHeight = computed(() => employees.value.length * ROW_HEIGHT)
 const totalDateWidth = computed(() => {
   if (props.viewType === 'monthView') {
-    // Calculate width to fit container without horizontal scroll
-    const containerWidth = containerRef.value?.clientWidth || 800
-    const availableWidth = containerWidth - EMPLOYEE_COLUMNS_WIDTH
-    return Math.max(availableWidth, yearDates.value.length * CELL_WIDTH)
+    // Calculate width based on 31 days maximum to ensure all days fit
+    const maxDaysInMonth = 31
+    return dynamicCellWidth.value * maxDaysInMonth
   }
   return yearDates.value.length * CELL_WIDTH
 })
@@ -357,9 +357,10 @@ const totalDateWidth = computed(() => {
 // Calculate dynamic cell width for month view
 const dynamicCellWidth = computed(() => {
   if (props.viewType === 'monthView') {
-    const containerWidth = containerRef.value?.clientWidth || 800
-    const availableWidth = containerWidth - EMPLOYEE_COLUMNS_WIDTH
-    return Math.max(CELL_WIDTH, Math.floor(availableWidth / yearDates.value.length))
+    const availableWidth = containerWidth.value - EMPLOYEE_COLUMNS_WIDTH
+    // Always calculate based on maximum 31 days to ensure consistency
+    const maxDaysInMonth = 31
+    return Math.max(20, Math.floor(availableWidth / maxDaysInMonth)) // Minimum 20px per day
   }
   return CELL_WIDTH
 })
@@ -644,9 +645,27 @@ const scrollToToday = () => {
 }
 
 // Lifecycle
+// Reactive container width for responsive calculations
+const containerWidth = ref(800)
+
+// ResizeObserver to handle container size changes
+let resizeObserver: ResizeObserver | null = null
+
 onMounted(async () => {
   await initialize()
   await nextTick()
+  
+  // Set up ResizeObserver to handle container width changes
+  if (containerRef.value) {
+    containerWidth.value = containerRef.value.clientWidth
+    
+    resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        containerWidth.value = entry.contentRect.width
+      }
+    })
+    resizeObserver.observe(containerRef.value)
+  }
   
   if (props.viewType === 'weekView') {
     scrollToToday()
@@ -657,7 +676,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // Cleanup if needed
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
 })
 
 // Expose methods for parent component
@@ -912,18 +933,32 @@ defineExpose({
 /* Month view specific styles */
 .date-headers.month-view {
   overflow: visible;
+  width: 100% !important;
 }
 
 .absence-cells.month-view {
   overflow: visible;
+  width: 100% !important;
+}
+
+.date-headers.month-view .date-cells {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.absence-cells.month-view {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
 }
 
 /* Prevent horizontal scrolling in month view */
 .calendar-body {
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
-.calendar-body:not(.week-view) {
+.calendar-container[data-view-type="monthView"] .calendar-body {
   overflow-x: hidden !important;
 }
 
