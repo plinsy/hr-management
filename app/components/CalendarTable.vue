@@ -35,13 +35,6 @@
             variant="outlined"
           />
           <v-btn
-            @click="navigateToday"
-            size="small"
-            variant="outlined"
-          >
-            Today
-          </v-btn>
-          <v-btn
             @click="navigateNext"
             icon="mdi-chevron-right"
             size="small"
@@ -51,6 +44,50 @@
         
         <div class="current-period">
           <h3>{{ currentPeriodLabel }}</h3>
+        </div>
+      </div>
+      
+      <!-- Date picker and Today button section -->
+      <div class="date-picker-section">
+        <div class="date-picker-controls">
+          <v-btn
+            @click="navigateToday"
+            prepend-icon="mdi-calendar-today"
+            size="small"
+            variant="outlined"
+            color="primary"
+          >
+            Today
+          </v-btn>
+          
+          <v-menu
+            v-model="showDatePicker"
+            :close-on-content-click="false"
+            location="bottom start"
+          >
+            <template v-slot:activator="{ props: menuProps }">
+              <v-btn
+                v-bind="menuProps"
+                prepend-icon="mdi-calendar"
+                size="small"
+                variant="outlined"
+              >
+                {{ formattedSelectedDate }}
+              </v-btn>
+            </template>
+            
+            <v-card>
+              <v-card-text>
+                <v-date-picker
+                  v-model="selectedDateForPicker"
+                  @update:model-value="handleDatePickerChange"
+                  hide-header
+                  show-adjacent-months
+                  color="primary"
+                />
+              </v-card-text>
+            </v-card>
+          </v-menu>
         </div>
       </div>
       
@@ -224,7 +261,7 @@ const EMPLOYEE_COLUMNS_WIDTH = 380 // Width for name and phone number columns
 const HEADER_HEIGHT = 80
 
 // View types
-export type ViewType = 'weekView' | 'monthView'
+export type ViewType = 'yearView' | 'monthView'
 
 // Props
 interface Props {
@@ -268,6 +305,10 @@ interface CachedMonthData {
 
 const monthDataCache = ref<Map<string, CachedMonthData>>(new Map())
 const isLoadingBackgroundData = ref(false)
+
+// Date picker state
+const showDatePicker = ref(false)
+const selectedDateForPicker = ref(new Date())
 
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
@@ -374,7 +415,10 @@ watch(() => props.viewType, (newViewType) => {
   }
 })
 
-watch(currentDate, () => {
+watch(currentDate, (newDate) => {
+  // Sync the date picker with current date
+  selectedDateForPicker.value = new Date(newDate)
+  
   if (props.viewType === 'monthView') {
     nextTick(() => preloadAdjacentMonths())
   }
@@ -489,6 +533,15 @@ const currentPeriodLabel = computed(() => {
   }
 })
 
+// Formatted selected date for the date picker button
+const formattedSelectedDate = computed(() => {
+  return currentDate.value.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+})
+
 /**
  * Navigate to previous period (week or month)
  */
@@ -530,6 +583,19 @@ const navigateNext = () => {
  */
 const navigateToday = () => {
   currentDate.value = new Date()
+  selectedDateForPicker.value = new Date()
+  showDatePicker.value = false
+}
+
+/**
+ * Handle date picker changes
+ */
+const handleDatePickerChange = (newDate: Date | null) => {
+  if (newDate) {
+    currentDate.value = new Date(newDate)
+    selectedDateForPicker.value = new Date(newDate)
+    showDatePicker.value = false
+  }
 }
 
 // Cache management functions
@@ -652,6 +718,9 @@ const containerWidth = ref(800)
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(async () => {
+  // Initialize date picker with current date
+  selectedDateForPicker.value = new Date(currentDate.value)
+  
   await initialize()
   await nextTick()
   
@@ -735,6 +804,22 @@ defineExpose({
   font-size: 1.1rem;
   font-weight: 500;
   color: #424242;
+}
+
+/* Date picker section styling */
+.date-picker-section {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.date-picker-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .calendar-content {
