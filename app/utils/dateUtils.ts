@@ -39,9 +39,13 @@ export function isWeekend(date: Date): boolean {
  */
 export function formatDate(
   date: Date,
-  format: 'short' | 'long' | 'iso' = 'short'
+  format: 'day' | 'short' | 'long' | 'iso' = 'short'
 ): string {
   switch (format) {
+    case 'day':
+      return date.toLocaleDateString('en-US', {
+        day: '2-digit'
+      })
     case 'short':
       return date.toLocaleDateString('en-US', {
         month: '2-digit',
@@ -197,4 +201,36 @@ export function getDatesInMonth(year: number, month: number): Date[] {
   const startDate = new Date(year, month, 1)
   const endDate = new Date(year, month + 1, 0) // Last day of the month
   return getDateRange(startDate, endDate)
+}
+
+/**
+ * Get all months for a year
+ * @param year - Year
+ * @returns Array of month data with dates
+ */
+export function getMonthsInYear(year: number): Array<{
+  name: string
+  shortName: string
+  month: number
+  year: number
+  dates: Date[]
+  firstDate: Date
+}> {
+  const months = []
+  
+  for (let month = 0; month < 12; month++) {
+    const firstDate = new Date(year, month, 1)
+    const dates = getDatesInMonth(year, month)
+    
+    months.push({
+      name: getMonthName(firstDate),
+      shortName: firstDate.toLocaleDateString('en-US', { month: 'short' }),
+      month,
+      year,
+      dates,
+      firstDate
+    })
+  }
+  
+  return months
 }

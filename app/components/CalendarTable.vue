@@ -2,12 +2,7 @@
   <div class="calendar-container" ref="containerRef" :data-view-type="props.viewType">
     <!-- Loading overlay -->
     <v-overlay v-if="isLoading" class="align-center justify-center">
-      <v-progress-circular
-        :size="70"
-        :width="7"
-        color="primary"
-        indeterminate
-      />
+      <v-progress-circular :size="70" :width="7" color="primary" indeterminate />
     </v-overlay>
 
     <!-- Calendar content -->
@@ -15,129 +10,89 @@
       <!-- View controls header -->
       <div class="view-controls">
         <div class="view-selector">
-          <v-btn-toggle
-            :model-value="props.viewType"
-            @update:model-value="$emit('update:viewType', $event)"
-            color="primary"
-            density="compact"
-            variant="outlined"
-          >
-            <v-btn value="weekView" size="small">Week View</v-btn>
+          <v-btn-toggle :model-value="props.viewType" @update:model-value="$emit('update:viewType', $event)"
+            color="primary" density="compact" variant="outlined">
+            <v-btn value="yearView" size="small">Year View</v-btn>
             <v-btn value="monthView" size="small">Month View</v-btn>
           </v-btn-toggle>
         </div>
-        
+
         <div class="date-navigation">
-          <v-btn
-            @click="navigatePrevious"
-            icon="mdi-chevron-left"
-            size="small"
-            variant="outlined"
-          />
-          <v-btn
-            @click="navigateNext"
-            icon="mdi-chevron-right"
-            size="small"
-            variant="outlined"
-          />
+          <v-btn @click="navigatePrevious" icon="mdi-chevron-left" size="small" variant="outlined" />
+          <v-btn @click="navigateNext" icon="mdi-chevron-right" size="small" variant="outlined" />
         </div>
-        
-        <div class="current-period">
+
+        <!-- <div class="current-period">
           <h3>{{ currentPeriodLabel }}</h3>
-        </div>
+        </div> -->
       </div>
-      
+
       <!-- Date picker and Today button section -->
       <div class="date-picker-section">
         <div class="date-picker-controls">
-          <v-btn
-            @click="navigateToday"
-            prepend-icon="mdi-calendar-today"
-            size="small"
-            variant="outlined"
-            color="primary"
-          >
+          <v-btn @click="navigateToday" prepend-icon="mdi-calendar-today" size="small" variant="outlined"
+            color="primary">
             Today
           </v-btn>
-          
-          <v-menu
-            v-model="showDatePicker"
-            :close-on-content-click="false"
-            location="bottom start"
-          >
+
+          <v-menu v-model="showDatePicker" :close-on-content-click="false" location="bottom start">
             <template v-slot:activator="{ props: menuProps }">
-              <v-btn
-                v-bind="menuProps"
-                prepend-icon="mdi-calendar"
-                size="small"
-                variant="outlined"
-              >
+              <v-btn v-bind="menuProps" prepend-icon="mdi-calendar" size="small" variant="outlined">
                 {{ formattedSelectedDate }}
               </v-btn>
             </template>
-            
+
             <v-card>
               <v-card-text>
-                <v-date-picker
-                  v-model="selectedDateForPicker"
-                  @update:model-value="handleDatePickerChange"
-                  hide-header
-                  show-adjacent-months
-                  color="primary"
-                />
+                <v-date-picker v-model="selectedDateForPicker" @update:model-value="handleDatePickerChange" hide-header
+                  show-adjacent-months color="primary" />
               </v-card-text>
             </v-card>
           </v-menu>
         </div>
       </div>
-      
+
       <!-- Fixed header with employee info columns -->
-      <div class="fixed-header">
+      <div v-if="viewType === 'monthView' || viewType === 'yearView'" class="fixed-header">
         <div class="employee-columns">
           <div class="employee-header-cell name-cell">First Name</div>
           <div class="employee-header-cell name-cell">Last Name</div>
           <div class="employee-header-cell phone-cell">Phone Number</div>
         </div>
-        
+
         <!-- Scrollable date headers -->
         <div class="date-headers-container" ref="dateHeadersRef">
-          <div 
-            class="date-headers"
-            :class="{ 'month-view': viewType === 'monthView' }"
-            :style="{ 
-              width: `${totalDateWidth}px`,
-              transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`,
-              // marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`
-            }"
-          >
-            <div
-              v-for="(month, monthIndex) in visibleMonths"
-              :key="monthIndex"
-              class="month-group"
-            >
+          <!-- Month View Headers -->
+          <div v-if="viewType === 'monthView'" class="date-headers month-view" :style="{
+            width: `${totalDateWidth}px`,
+            transform: 'translateX(0)'
+          }">
+            <div v-for="(month, monthIndex) in visibleMonths" :key="monthIndex" class="month-group">
               <!-- Month header -->
-              <div 
-                class="month-header"
-                :style="{ width: viewType === 'monthView' ? '100%' : `${month.daysInMonth * dynamicCellWidth}px` }"
-              >
+              <div class="month-header" :style="{ width: '100%' }">
                 {{ month.name }} {{ month.year }}
               </div>
-              
+
               <!-- Date cells -->
               <div class="date-cells">
-                <div
-                  v-for="date in month.dates"
-                  :key="date.getTime()"
-                  class="date-header-cell"
-                  :class="{
-                    'weekend': isWeekend(date),
-                    'today': isToday(date)
-                  }"
-                  :style="{ width: `${dynamicCellWidth}px` }"
-                >
-                  <div class="date-day">{{ formatDate(date, 'short') }}</div>
+                <div v-for="date in month.dates" :key="date.getTime()" class="date-header-cell" :class="{
+                  'weekend': isWeekend(date),
+                  'today': isToday(date)
+                }" :style="{ width: `${dynamicCellWidth}px` }">
+                  <div class="date-day">{{ formatDate(date, 'day') }}</div>
                   <div class="date-weekday">{{ getDayName(date) }}</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Year View Headers -->
+          <div v-else-if="viewType === 'yearView'" class="date-headers year-view">
+            <div class="year-month-headers">
+              <div v-for="monthData in yearViewData" :key="`header-${monthData.year}-${monthData.month}`"
+                class="year-month-header" @click="navigateToMonth(monthData.year, monthData.month)">
+                <div class="month-name">{{ monthData.shortName }}</div>
+                <div class="month-year">{{ monthData.year }}</div>
               </div>
             </div>
           </div>
@@ -145,80 +100,118 @@
       </div>
 
       <!-- Scrollable body -->
-      <div 
-        class="calendar-body"
-        ref="calendarBodyRef"
-        @scroll="handleScroll"
-        :style="{ height: `${containerHeight}px` }"
-      >
-        <div
-          class="virtual-content"
-          :style="{ 
+      <div class="calendar-body" ref="calendarBodyRef" @scroll="handleScroll"
+        :style="{ height: `${containerHeight}px` }">
+        <!-- Year View -->
+        <div v-if="viewType === 'yearView'" class="year-view-content">
+          <div class="virtual-content" :style="{
             height: `${totalEmployeeHeight}px`,
-            width: `${totalDateWidth + EMPLOYEE_COLUMNS_WIDTH}px`
-          }"
-        >
-          <!-- Virtual scrolling employees -->
-          <div
-            v-for="(employee, employeeIndex) in visibleEmployees"
-            :key="employee.id"
-            class="employee-row"
-            :style="{
+            width: `${yearViewTotalWidth}px`
+          }">
+            <!-- Virtual scrolling employees for year view -->
+            <div v-for="(employee, employeeIndex) in visibleEmployees" :key="employee.id" class="employee-row" :style="{
               position: 'absolute',
               top: `${(employeeVisibleRange.startIndex + employeeIndex) * ROW_HEIGHT}px`,
               height: `${ROW_HEIGHT}px`,
               width: '100%'
-            }"
-          >
-            <!-- Fixed employee info columns -->
-            <div class="employee-info">
-              <div class="employee-cell name-cell">{{ employee.firstName }}</div>
-              <div class="employee-cell name-cell">{{ employee.lastName }}</div>
-              <div class="employee-cell phone-cell">{{ employee.phoneNumber }}</div>
-            </div>
+            }">
+              <!-- Fixed employee info columns -->
+              <div class="employee-info">
+                <div class="employee-cell name-cell">{{ employee.firstName }}</div>
+                <div class="employee-cell name-cell">{{ employee.lastName }}</div>
+                <div class="employee-cell phone-cell">{{ employee.phoneNumber }}</div>
+              </div>
 
-            <!-- Absence cells -->
-            <div 
-              class="absence-cells"
-              :class="{ 'month-view': viewType === 'monthView' }"
-              :style="{ 
-                // marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`,
-                transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`
-              }"
-            >
-              <div
-                v-for="(date, dateIndex) in visibleDates"
-                :key="`${employee.id}-${date.getTime()}`"
-                class="absence-cell"
-                :class="{
-                  'absent': getAbsenceForDate(employee.id, date),
-                  'present': !getAbsenceForDate(employee.id, date) && !isWeekend(date),
-                  'weekend': isWeekend(date),
-                  'today': isToday(date)
-                }"
-                :style="{ 
-                  width: `${dynamicCellWidth}px`,
-                  height: `${ROW_HEIGHT}px`
-                }"
-                @click="handleCellClick(employee, date)"
-                @mouseover="handleCellHover(employee, date)"
-                @mouseleave="handleCellLeave"
-              >
-                <!-- Tooltip for absence details -->
-                <v-tooltip
-                  v-if="getAbsenceForDate(employee.id, date)"
-                  activator="parent"
-                  location="top"
-                >
-                  <div class="absence-tooltip">
-                    <div><strong>{{ employee.firstName }} {{ employee.lastName }}</strong></div>
-                    <div>{{ formatDate(date, 'long') }}</div>
-                    <div>Type: {{ getAbsenceForDate(employee.id, date)?.type }}</div>
-                    <div v-if="getAbsenceForDate(employee.id, date)?.reason">
-                      Reason: {{ getAbsenceForDate(employee.id, date)?.reason }}
+              <!-- Month absence cells -->
+              <div class="absence-cells year-view">
+                <div v-for="monthData in yearViewData" :key="`${employee.id}-${monthData.year}-${monthData.month}`"
+                  class="absence-cell year-month-cell" :class="{
+                    'has-absences': getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0,
+                    'no-absences': getMonthAbsenceCount(employee.id, monthData.year, monthData.month) === 0
+                  }" :style="{
+                    width: `${yearMonthCellWidth}px`,
+                    height: `${ROW_HEIGHT}px`
+                  }" @click="handleMonthCellClick(employee, monthData.year, monthData.month)">
+
+                  <!-- Absence count display -->
+                  <span v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0" class="absence-count-display">
+                    {{ getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 9 ? '9+' : getMonthAbsenceCount(employee.id, monthData.year, monthData.month) }}
+                  </span>
+
+                  <!-- Tooltip for month absences -->
+                  <v-tooltip v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0" activator="parent" location="top">
+                    <div class="month-absence-tooltip">
+                      <div class="tooltip-header">
+                        <strong>{{ employee.firstName }} {{ employee.lastName }}</strong>
+                      </div>
+                      <div class="tooltip-month">{{ monthData.name }} {{ monthData.year }}</div>
+                      <div class="tooltip-divider"></div>
+                      <div class="absence-list">
+                        <div v-for="absence in getEmployeeMonthAbsences(employee.id, monthData.year, monthData.month)" 
+                             :key="absence.id" class="absence-item">
+                          <div class="absence-dates">
+                            {{ formatDate(new Date(absence.startDate), 'short') }} - 
+                            {{ formatDate(new Date(absence.endDate), 'short') }}
+                          </div>
+                          <div class="absence-type">{{ absence.type }}</div>
+                          <div v-if="absence.reason" class="absence-reason">{{ absence.reason }}</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </v-tooltip>
+                  </v-tooltip>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Month View -->
+        <div v-else-if="viewType === 'monthView'" class="month-view-content">
+          <div class="virtual-content" :style="{
+            height: `${totalEmployeeHeight}px`,
+            width: `${totalDateWidth + EMPLOYEE_COLUMNS_WIDTH}px`
+          }">
+            <!-- Virtual scrolling employees -->
+            <div v-for="(employee, employeeIndex) in visibleEmployees" :key="employee.id" class="employee-row" :style="{
+              position: 'absolute',
+              top: `${(employeeVisibleRange.startIndex + employeeIndex) * ROW_HEIGHT}px`,
+              height: `${ROW_HEIGHT}px`,
+              width: '100%'
+            }">
+              <!-- Fixed employee info columns -->
+              <div class="employee-info">
+                <div class="employee-cell name-cell">{{ employee.firstName }}</div>
+                <div class="employee-cell name-cell">{{ employee.lastName }}</div>
+                <div class="employee-cell phone-cell">{{ employee.phoneNumber }}</div>
+              </div>
+
+              <!-- Absence cells -->
+              <div class="absence-cells" :class="{ 'month-view': viewType === 'monthView' }" :style="{
+                transform: 'translateX(0)'
+              }">
+                <div v-for="(date, dateIndex) in visibleDates" :key="`${employee.id}-${date.getTime()}`"
+                  class="absence-cell" :class="{
+                    'absent': getAbsenceForDate(employee.id, date),
+                    'present': !getAbsenceForDate(employee.id, date) && !isWeekend(date),
+                    'weekend': isWeekend(date),
+                    'today': isToday(date)
+                  }" :style="{
+                    width: `${dynamicCellWidth}px`,
+                    height: `${ROW_HEIGHT}px`
+                  }" @click="handleCellClick(employee, date)" @mouseover="handleCellHover(employee, date)"
+                  @mouseleave="handleCellLeave">
+                  <!-- Tooltip for absence details -->
+                  <v-tooltip v-if="getAbsenceForDate(employee.id, date)" activator="parent" location="top">
+                    <div class="absence-tooltip">
+                      <div><strong>{{ employee.firstName }} {{ employee.lastName }}</strong></div>
+                      <div>{{ formatDate(date, 'long') }}</div>
+                      <div>Type: {{ getAbsenceForDate(employee.id, date)?.type }}</div>
+                      <div v-if="getAbsenceForDate(employee.id, date)?.reason">
+                        Reason: {{ getAbsenceForDate(employee.id, date)?.reason }}
+                      </div>
+                    </div>
+                  </v-tooltip>
+                </div>
               </div>
             </div>
           </div>
@@ -232,19 +225,20 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence } from '~/types'
-import { 
-  getDatesInYear, 
+import {
+  getDatesInYear,
   getCurrentWeekDates,
   getDatesInMonth,
-  isWeekend, 
-  isToday, 
-  formatDate, 
+  getMonthsInYear,
+  isWeekend,
+  isToday,
+  formatDate,
   getDayName,
   getMonthName,
   getCurrentYear
 } from '~/utils/dateUtils'
-import { 
-  calculateVisibleRange, 
+import {
+  calculateVisibleRange,
   calculateHorizontalVisibleRange,
   throttle
 } from '~/utils/virtualScrolling'
@@ -273,7 +267,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   year: () => getCurrentYear(),
   containerHeight: 600,
-  viewType: 'weekView' as ViewType
+  viewType: 'yearView' as ViewType
 })
 
 // Emits
@@ -310,13 +304,17 @@ const isLoadingBackgroundData = ref(false)
 const showDatePicker = ref(false)
 const selectedDateForPicker = ref(new Date())
 
+// Reactive container width for responsive calculations
+const containerWidth = ref(800)
+
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
 
 const displayDates = computed(() => {
   switch (props.viewType) {
-    case 'weekView':
-      return getCurrentWeekDates(currentDate.value)
+    case 'yearView':
+      // For year view, we'll return empty array as we handle months differently
+      return []
     case 'monthView':
       // Use cached data if available, otherwise generate fresh
       const cacheKey = getCacheKey(currentDate.value.getFullYear(), currentDate.value.getMonth())
@@ -326,15 +324,64 @@ const displayDates = computed(() => {
       }
       return getDatesInMonth(currentDate.value.getFullYear(), currentDate.value.getMonth())
     default:
-      return getCurrentWeekDates(currentDate.value)
+      return []
   }
 })
 
 // Keep yearDates for backward compatibility, but use displayDates for the view
 const yearDates = computed(() => displayDates.value)
 
+// Year view data - months with absence counts
+const yearViewData = computed(() => {
+  if (props.viewType !== 'yearView') return []
+
+  const months = getMonthsInYear(currentDate.value.getFullYear())
+
+  return months.map(month => {
+    // Calculate absence counts for this month
+    let totalAbsences = 0
+
+    employees.value.forEach(employee => {
+      employee.absences.forEach(absence => {
+        const startDate = new Date(absence.startDate)
+        const endDate = new Date(absence.endDate)
+
+        // Check if absence overlaps with this month
+        const monthStart = month.firstDate
+        const monthEnd = new Date(month.year, month.month + 1, 0)
+
+        if (startDate <= monthEnd && endDate >= monthStart) {
+          totalAbsences++
+        }
+      })
+    })
+
+    return {
+      ...month,
+      absenceCount: totalAbsences,
+      displayCount: totalAbsences > 9 ? '9+' : totalAbsences.toString()
+    }
+  })
+})
+
+// Year view table dimensions
+const yearMonthCellWidth = computed(() => {
+  if (props.viewType === 'yearView') {
+    const _containerWidth = containerWidth.value - EMPLOYEE_COLUMNS_WIDTH
+    return Math.max(80, Math.floor(_containerWidth / 12)) // 12 months
+  }
+  return 80
+})
+
+const yearViewTotalWidth = computed(() => {
+  if (props.viewType === 'yearView') {
+    return EMPLOYEE_COLUMNS_WIDTH + (yearMonthCellWidth.value * 12)
+  }
+  return EMPLOYEE_COLUMNS_WIDTH
+})
+
 // Virtual scrolling ranges
-const employeeVisibleRange = computed(() => 
+const employeeVisibleRange = computed(() =>
   calculateVisibleRange(
     scrollTop.value,
     props.containerHeight - HEADER_HEIGHT,
@@ -352,7 +399,7 @@ const dateVisibleRange = computed(() => {
       endIndex: yearDates.value.length - 1
     }
   }
-  
+
   // For week view, keep horizontal scrolling if needed
   return calculateHorizontalVisibleRange(
     scrollLeft.value,
@@ -364,7 +411,7 @@ const dateVisibleRange = computed(() => {
 })
 
 // Visible data
-const visibleEmployees = computed(() => 
+const visibleEmployees = computed(() =>
   employees.value.slice(
     employeeVisibleRange.value.startIndex,
     employeeVisibleRange.value.endIndex + 1
@@ -376,7 +423,7 @@ const visibleDates = computed(() => {
   if (props.viewType === 'monthView') {
     return yearDates.value
   }
-  
+
   // For week view, use virtual scrolling
   return yearDates.value.slice(
     dateVisibleRange.value.startIndex,
@@ -391,6 +438,9 @@ const totalDateWidth = computed(() => {
     // Calculate width based on 31 days maximum to ensure all days fit
     const maxDaysInMonth = 31
     return dynamicCellWidth.value * maxDaysInMonth
+  } else if (props.viewType === 'yearView') {
+    // Calculate width for 12 months
+    return yearMonthCellWidth.value * 12
   }
   return yearDates.value.length * CELL_WIDTH
 })
@@ -418,7 +468,7 @@ watch(() => props.viewType, (newViewType) => {
 watch(currentDate, (newDate) => {
   // Sync the date picker with current date
   selectedDateForPicker.value = new Date(newDate)
-  
+
   if (props.viewType === 'monthView') {
     nextTick(() => preloadAdjacentMonths())
   }
@@ -432,18 +482,18 @@ const visibleMonths = computed(() => {
     daysInMonth: number
     dates: Date[]
   }> = []
-  
+
   let currentMonth = -1
   let currentMonthData: any = null
-  
+
   for (const date of visibleDates.value) {
     const month = date.getMonth()
-    
+
     if (month !== currentMonth) {
       if (currentMonthData) {
         months.push(currentMonthData)
       }
-      
+
       currentMonth = month
       currentMonthData = {
         name: getMonthName(date),
@@ -455,11 +505,11 @@ const visibleMonths = computed(() => {
       currentMonthData.dates.push(date)
     }
   }
-  
+
   if (currentMonthData) {
     months.push(currentMonthData)
   }
-  
+
   return months
 })
 
@@ -476,21 +526,11 @@ const getAbsenceForDate = (employeeId: string, date: Date): Absence | null => {
  */
 const handleScroll = throttle((event: Event) => {
   const target = event.target as HTMLElement
-  
-  // Only handle horizontal scroll for week view
-  if (props.viewType === 'weekView') {
-    scrollLeft.value = target.scrollLeft
-    
-    // Sync horizontal scroll with date headers
-    if (dateHeadersRef.value) {
-      dateHeadersRef.value.scrollLeft = target.scrollLeft
-    }
-  } else {
-    // For month view, prevent horizontal scrolling
-    target.scrollLeft = 0
-    scrollLeft.value = 0
-  }
-  
+
+  // Prevent horizontal scrolling
+  target.scrollLeft = 0
+  scrollLeft.value = 0
+
   scrollTop.value = target.scrollTop
 }, 16) // ~60fps
 
@@ -503,6 +543,59 @@ const handleCellClick = (employee: Employee, date: Date) => {
     throw new Error(`Cell not found ${employee.id} - ${date.toISOString()}`)
   }
   emit('cellClick', employee, date, absence)
+}
+
+/**
+ * Get absence count for a specific employee and month
+ */
+const getMonthAbsenceCount = (employeeId: string, year: number, month: number): number => {
+  const employee = employees.value.find(emp => emp.id === employeeId)
+  if (!employee) return 0
+
+  const monthStart = new Date(year, month, 1)
+  const monthEnd = new Date(year, month + 1, 0)
+
+  let count = 0
+  employee.absences.forEach(absence => {
+    const startDate = new Date(absence.startDate)
+    const endDate = new Date(absence.endDate)
+    
+    // Check if absence overlaps with this month
+    if (startDate <= monthEnd && endDate >= monthStart) {
+      count++
+    }
+  })
+
+  return count
+}
+
+/**
+ * Get all absences for a specific employee and month
+ */
+const getEmployeeMonthAbsences = (employeeId: string, year: number, month: number): Absence[] => {
+  const employee = employees.value.find(emp => emp.id === employeeId)
+  if (!employee) return []
+
+  const monthStart = new Date(year, month, 1)
+  const monthEnd = new Date(year, month + 1, 0)
+
+  return employee.absences.filter(absence => {
+    const startDate = new Date(absence.startDate)
+    const endDate = new Date(absence.endDate)
+    
+    // Check if absence overlaps with this month
+    return startDate <= monthEnd && endDate >= monthStart
+  })
+}
+
+/**
+ * Handle month cell click in year view
+ */
+const handleMonthCellClick = (employee: Employee, year: number, month: number) => {
+  // Navigate to month view for this specific month
+  currentDate.value = new Date(year, month, 1)
+  selectedDateForPicker.value = new Date(year, month, 1)
+  emit('update:viewType', 'monthView')
 }
 
 /**
@@ -521,13 +614,8 @@ const handleCellLeave = () => {
 
 // Current period label for display
 const currentPeriodLabel = computed(() => {
-  if (props.viewType === 'weekView') {
-    const weekStart = displayDates.value[0]
-    const weekEnd = displayDates.value[displayDates.value.length - 1]
-    if (weekStart && weekEnd) {
-      return `${formatDate(weekStart, 'short')} - ${formatDate(weekEnd, 'short')} ${weekStart.getFullYear()}`
-    }
-    return 'Current Week'
+  if (props.viewType === 'yearView') {
+    return `${currentDate.value.getFullYear()}`
   } else {
     return `${getMonthName(currentDate.value)} ${currentDate.value.getFullYear()}`
   }
@@ -543,17 +631,17 @@ const formattedSelectedDate = computed(() => {
 })
 
 /**
- * Navigate to previous period (week or month)
+ * Navigate to previous period (year or month)
  */
 const navigatePrevious = () => {
   const newDate = new Date(currentDate.value)
-  if (props.viewType === 'weekView') {
-    newDate.setDate(newDate.getDate() - 7)
+  if (props.viewType === 'yearView') {
+    newDate.setFullYear(newDate.getFullYear() - 1)
   } else {
     newDate.setMonth(newDate.getMonth() - 1)
   }
   currentDate.value = newDate
-  
+
   // Preload adjacent months for month view
   if (props.viewType === 'monthView') {
     nextTick(() => preloadAdjacentMonths())
@@ -561,17 +649,17 @@ const navigatePrevious = () => {
 }
 
 /**
- * Navigate to next period (week or month)
+ * Navigate to next period (year or month)
  */
 const navigateNext = () => {
   const newDate = new Date(currentDate.value)
-  if (props.viewType === 'weekView') {
-    newDate.setDate(newDate.getDate() + 7)
+  if (props.viewType === 'yearView') {
+    newDate.setFullYear(newDate.getFullYear() + 1)
   } else {
     newDate.setMonth(newDate.getMonth() + 1)
   }
   currentDate.value = newDate
-  
+
   // Preload adjacent months for month view
   if (props.viewType === 'monthView') {
     nextTick(() => preloadAdjacentMonths())
@@ -596,6 +684,15 @@ const handleDatePickerChange = (newDate: Date | null) => {
     selectedDateForPicker.value = new Date(newDate)
     showDatePicker.value = false
   }
+}
+
+/**
+ * Navigate to specific month (from year view)
+ */
+const navigateToMonth = (year: number, month: number) => {
+  currentDate.value = new Date(year, month, 1)
+  selectedDateForPicker.value = new Date(year, month, 1)
+  emit('update:viewType', 'monthView')
 }
 
 // Cache management functions
@@ -631,7 +728,7 @@ const cacheMonthData = (year: number, month: number, dates: Date[], employees: E
  */
 const loadMonthDataInBackground = async (year: number, month: number) => {
   const cacheKey = getCacheKey(year, month)
-  
+
   // Skip if already cached and valid
   const existingCache = monthDataCache.value.get(cacheKey)
   if (existingCache && isCacheValid(existingCache)) {
@@ -639,17 +736,17 @@ const loadMonthDataInBackground = async (year: number, month: number) => {
   }
 
   isLoadingBackgroundData.value = true
-  
+
   try {
     // Generate dates for the month
     const dates = getDatesInMonth(year, month)
-    
+
     // Get employees data (in a real app, this might be a filtered API call)
     const employees = employeeStore.getAllEmployees
-    
+
     // Cache the data
     cacheMonthData(year, month, dates, employees)
-    
+
   } catch (error) {
     console.error('Failed to load background data:', error)
   } finally {
@@ -662,15 +759,15 @@ const loadMonthDataInBackground = async (year: number, month: number) => {
  */
 const preloadAdjacentMonths = () => {
   if (props.viewType !== 'monthView') return
-  
+
   const currentYear = currentDate.value.getFullYear()
   const currentMonth = currentDate.value.getMonth()
-  
+
   // Load next month
   const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
   const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
   loadMonthDataInBackground(nextYear, nextMonth)
-  
+
   // Load previous month
   const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
   const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
@@ -682,7 +779,7 @@ const preloadAdjacentMonths = () => {
  */
 const initialize = async () => {
   isLoading.value = true
-  
+
   try {
     // Load employee data if not already loaded
     if (employees.value.length === 0) {
@@ -700,10 +797,10 @@ const initialize = async () => {
  */
 const scrollToToday = () => {
   const today = new Date()
-  const todayIndex = yearDates.value.findIndex(date => 
+  const todayIndex = yearDates.value.findIndex(date =>
     date.toDateString() === today.toDateString()
   )
-  
+
   if (todayIndex !== -1 && calendarBodyRef.value) {
     const scrollPosition = Math.max(0, todayIndex * CELL_WIDTH - 200)
     calendarBodyRef.value.scrollLeft = scrollPosition
@@ -711,23 +808,20 @@ const scrollToToday = () => {
 }
 
 // Lifecycle
-// Reactive container width for responsive calculations
-const containerWidth = ref(800)
-
 // ResizeObserver to handle container size changes
 let resizeObserver: ResizeObserver | null = null
 
 onMounted(async () => {
   // Initialize date picker with current date
   selectedDateForPicker.value = new Date(currentDate.value)
-  
+
   await initialize()
   await nextTick()
-  
+
   // Set up ResizeObserver to handle container width changes
   if (containerRef.value) {
     containerWidth.value = containerRef.value.clientWidth
-    
+
     resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         containerWidth.value = entry.contentRect.width
@@ -735,13 +829,12 @@ onMounted(async () => {
     })
     resizeObserver.observe(containerRef.value)
   }
-  
-  if (props.viewType === 'weekView') {
-    scrollToToday()
-  } else {
+
+  if (props.viewType === 'monthView') {
     // For month view, preload adjacent months
     preloadAdjacentMonths()
   }
+  // Year view doesn't need special initialization
 })
 
 onUnmounted(() => {
@@ -1047,7 +1140,143 @@ defineExpose({
   overflow-x: hidden !important;
 }
 
-/* Tooltip styling */
+/* Year view specific styles */
+.year-view-content {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Year view headers */
+.date-headers.year-view {
+  display: flex;
+  width: 100%;
+}
+
+.year-month-headers {
+  display: flex;
+  width: 100%;
+}
+
+.year-month-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #e0e0e0;
+  padding: 8px 4px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  min-height: 60px;
+}
+
+.year-month-header:hover {
+  background-color: #e3f2fd;
+}
+
+.month-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1976d2;
+}
+
+.month-year {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Year view absence cells */
+.absence-cells.year-view {
+  display: flex;
+  overflow: visible;
+  width: 100%;
+}
+
+.year-month-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.year-month-cell.has-absences {
+  background-color: #f44336;
+  color: white;
+}
+
+.year-month-cell.no-absences {
+  background-color: #4caf50;
+}
+
+.year-month-cell:hover {
+  transform: scale(1.1);
+  z-index: 3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.absence-count-display {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+/* Year view tooltip styles */
+.month-absence-tooltip {
+  max-width: 300px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.tooltip-header {
+  margin-bottom: 8px;
+}
+
+.tooltip-month {
+  color: #1976d2;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.tooltip-divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 8px 0;
+}
+
+.absence-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.absence-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.absence-item:last-child {
+  border-bottom: none;
+}
+
+.absence-dates {
+  font-weight: 500;
+  color: #424242;
+}
+
+.absence-type {
+  text-transform: capitalize;
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.absence-reason {
+  font-style: italic;
+  color: #888;
+  font-size: 0.8rem;
+}/* Tooltip styling */
 .absence-tooltip {
   font-size: 0.875rem;
   line-height: 1.4;
@@ -1055,35 +1284,37 @@ defineExpose({
 
 /* Responsive adjustments */
 @media (max-width: 960px) {
+
   .employee-columns,
   .employee-info {
     width: 340px;
   }
-  
+
   .name-cell {
     width: 100px;
   }
-  
+
   .phone-cell {
     width: 120px;
   }
 }
 
 @media (max-width: 600px) {
+
   .employee-columns,
   .employee-info {
     width: 260px;
   }
-  
+
   .name-cell {
     width: 80px;
   }
-  
+
   .phone-cell {
     width: 100px;
     font-size: 0.7rem;
   }
-  
+
   .employee-cell,
   .employee-header-cell {
     padding: 4px 8px;

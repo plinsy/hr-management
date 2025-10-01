@@ -137,18 +137,6 @@
           {{ totalEmployees }} Employees
         </v-chip>
 
-        <!-- Today button -->
-        <v-btn
-          color="secondary"
-          variant="elevated"
-          @click="scrollToToday"
-          :disabled="isLoading"
-          :size="mobile ? 'small' : 'default'"
-        >
-          <v-icon :start="!mobile">mdi-calendar-today</v-icon>
-          <span v-if="!mobile">Today</span>
-        </v-btn>
-
         <!-- Refresh button -->
         <v-btn
           icon="mdi-refresh"
@@ -452,7 +440,7 @@ const error = ref<string | null>(null)
 const successMessage = ref('')
 const showSuccessMessage = ref(false)
 const showStatsDialog = ref(false)
-const viewType = ref<ViewType>('weekView')
+const viewType = ref<ViewType>('yearView')
 
 // Employee section state
 const employeeSearch = ref('')
