@@ -12,6 +12,48 @@
 
     <!-- Calendar content -->
     <div v-if="!isLoading" class="calendar-content">
+      <!-- View controls header -->
+      <div class="view-controls">
+        <div class="view-selector">
+          <v-btn-toggle
+            :model-value="props.viewType"
+            @update:model-value="$emit('update:viewType', $event)"
+            color="primary"
+            density="compact"
+            variant="outlined"
+          >
+            <v-btn value="weekView" size="small">Week View</v-btn>
+            <v-btn value="monthView" size="small">Month View</v-btn>
+          </v-btn-toggle>
+        </div>
+        
+        <div class="date-navigation">
+          <v-btn
+            @click="navigatePrevious"
+            icon="mdi-chevron-left"
+            size="small"
+            variant="outlined"
+          />
+          <v-btn
+            @click="navigateToday"
+            size="small"
+            variant="outlined"
+          >
+            Today
+          </v-btn>
+          <v-btn
+            @click="navigateNext"
+            icon="mdi-chevron-right"
+            size="small"
+            variant="outlined"
+          />
+        </div>
+        
+        <div class="current-period">
+          <h3>{{ currentPeriodLabel }}</h3>
+        </div>
+      </div>
+      
       <!-- Fixed header with employee info columns -->
       <div class="fixed-header">
         <div class="employee-columns">
@@ -152,6 +194,8 @@ import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence } from '~/types'
 import { 
   getDatesInYear, 
+  getCurrentWeekDates,
+  getDatesInMonth,
   isWeekend, 
   isToday, 
   formatDate, 
@@ -176,20 +220,26 @@ const CELL_WIDTH = 40
 const EMPLOYEE_COLUMNS_WIDTH = 380 // Width for name and phone number columns
 const HEADER_HEIGHT = 80
 
+// View types
+export type ViewType = 'weekView' | 'monthView'
+
 // Props
 interface Props {
   year?: number
   containerHeight?: number
+  viewType?: ViewType
 }
 
 const props = withDefaults(defineProps<Props>(), {
   year: () => getCurrentYear(),
-  containerHeight: 600
+  containerHeight: 600,
+  viewType: 'weekView' as ViewType
 })
 
 // Emits
 const emit = defineEmits<{
   cellClick: [employee: Employee, date: Date, absence?: Absence]
+  'update:viewType': [viewType: ViewType]
 }>()
 
 // Store
@@ -204,10 +254,24 @@ const dateHeadersRef = ref<HTMLElement>()
 const scrollLeft = ref(0)
 const scrollTop = ref(0)
 const isLoading = ref(true)
+const currentDate = ref(new Date()) // For week/month navigation
 
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
-const yearDates = computed(() => getDatesInYear(props.year))
+
+const displayDates = computed(() => {
+  switch (props.viewType) {
+    case 'weekView':
+      return getCurrentWeekDates(currentDate.value)
+    case 'monthView':
+      return getDatesInMonth(currentDate.value.getFullYear(), currentDate.value.getMonth())
+    default:
+      return getCurrentWeekDates(currentDate.value)
+  }
+})
+
+// Keep yearDates for backward compatibility, but use displayDates for the view
+const yearDates = computed(() => displayDates.value)
 
 // Virtual scrolling ranges
 const employeeVisibleRange = computed(() => 
@@ -335,6 +399,53 @@ const handleCellLeave = () => {
   // Optional: Remove hover effects
 }
 
+// Current period label for display
+const currentPeriodLabel = computed(() => {
+  if (props.viewType === 'weekView') {
+    const weekStart = displayDates.value[0]
+    const weekEnd = displayDates.value[displayDates.value.length - 1]
+    if (weekStart && weekEnd) {
+      return `${formatDate(weekStart, 'short')} - ${formatDate(weekEnd, 'short')} ${weekStart.getFullYear()}`
+    }
+    return 'Current Week'
+  } else {
+    return `${getMonthName(currentDate.value)} ${currentDate.value.getFullYear()}`
+  }
+})
+
+/**
+ * Navigate to previous period (week or month)
+ */
+const navigatePrevious = () => {
+  const newDate = new Date(currentDate.value)
+  if (props.viewType === 'weekView') {
+    newDate.setDate(newDate.getDate() - 7)
+  } else {
+    newDate.setMonth(newDate.getMonth() - 1)
+  }
+  currentDate.value = newDate
+}
+
+/**
+ * Navigate to next period (week or month)
+ */
+const navigateNext = () => {
+  const newDate = new Date(currentDate.value)
+  if (props.viewType === 'weekView') {
+    newDate.setDate(newDate.getDate() + 7)
+  } else {
+    newDate.setMonth(newDate.getMonth() + 1)
+  }
+  currentDate.value = newDate
+}
+
+/**
+ * Navigate to today
+ */
+const navigateToday = () => {
+  currentDate.value = new Date()
+}
+
 /**
  * Initialize component
  */
@@ -398,6 +509,41 @@ defineExpose({
   background-color: #fff;
   display: flex;
   flex-direction: column;
+}
+
+/* View controls styling */
+.view-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.view-selector {
+  display: flex;
+  align-items: center;
+}
+
+.date-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.current-period {
+  flex: 1;
+  text-align: center;
+}
+
+.current-period h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #424242;
 }
 
 .calendar-content {

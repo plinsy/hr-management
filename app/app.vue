@@ -193,7 +193,9 @@
             ref="calendarRef"
             :year="selectedYear"
             :container-height="calendarHeight"
+            :view-type="viewType"
             @cell-click="handleCellClick"
+            @update:view-type="viewType = $event"
           />
         </div>
 
@@ -421,6 +423,7 @@ import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence, AbsenceDialogData } from '~/types'
 import { getCurrentYear } from '~/utils/dateUtils'
 import type CalendarTable from './components/CalendarTable.vue'
+import type { ViewType } from './components/CalendarTable.vue'
 import AbsenceDialog from './components/AbsenceDialog.vue'
 
 /**
@@ -449,6 +452,7 @@ const error = ref<string | null>(null)
 const successMessage = ref('')
 const showSuccessMessage = ref(false)
 const showStatsDialog = ref(false)
+const viewType = ref<ViewType>('weekView')
 
 // Employee section state
 const employeeSearch = ref('')

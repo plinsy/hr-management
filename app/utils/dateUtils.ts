@@ -174,3 +174,27 @@ export function daysDifference(date1: Date, date2: Date): number {
 export function getCurrentYear(): number {
   return new Date().getFullYear()
 }
+
+/**
+ * Get dates for the current week (Sunday to Saturday)
+ * @param referenceDate - Optional reference date (defaults to today)
+ * @returns Array of dates for the current week
+ */
+export function getCurrentWeekDates(referenceDate?: Date): Date[] {
+  const baseDate = referenceDate || new Date()
+  const weekStart = getWeekStart(baseDate)
+  const weekEnd = getWeekEnd(baseDate)
+  return getDateRange(weekStart, weekEnd)
+}
+
+/**
+ * Get dates for a specific month
+ * @param year - Year
+ * @param month - Month (0-based, 0 = January)
+ * @returns Array of dates for the month
+ */
+export function getDatesInMonth(year: number, month: number): Date[] {
+  const startDate = new Date(year, month, 1)
+  const endDate = new Date(year, month + 1, 0) // Last day of the month
+  return getDateRange(startDate, endDate)
+}
