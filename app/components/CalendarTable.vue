@@ -66,9 +66,10 @@
         <div class="date-headers-container" ref="dateHeadersRef">
           <div 
             class="date-headers"
+            :class="{ 'month-view': viewType === 'monthView' }"
             :style="{ 
               width: `${totalDateWidth}px`,
-              transform: `translateX(-${scrollLeft}px)`
+              transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`
             }"
           >
             <div
@@ -79,7 +80,7 @@
               <!-- Month header -->
               <div 
                 class="month-header"
-                :style="{ width: `${month.daysInMonth * CELL_WIDTH}px` }"
+                :style="{ width: viewType === 'monthView' ? '100%' : `${month.daysInMonth * dynamicCellWidth}px` }"
               >
                 {{ month.name }} {{ month.year }}
               </div>
@@ -94,7 +95,7 @@
                     'weekend': isWeekend(date),
                     'today': isToday(date)
                   }"
-                  :style="{ width: `${CELL_WIDTH}px` }"
+                  :style="{ width: `${dynamicCellWidth}px` }"
                 >
                   <div class="date-day">{{ formatDate(date, 'short') }}</div>
                   <div class="date-weekday">{{ getDayName(date) }}</div>
@@ -141,9 +142,10 @@
             <!-- Absence cells -->
             <div 
               class="absence-cells"
+              :class="{ 'month-view': viewType === 'monthView' }"
               :style="{ 
                 marginLeft: `${EMPLOYEE_COLUMNS_WIDTH}px`,
-                transform: `translateX(-${scrollLeft}px)`
+                transform: viewType === 'monthView' ? 'translateX(0)' : `translateX(-${scrollLeft}px)`
               }"
             >
               <div
@@ -157,7 +159,7 @@
                   'today': isToday(date)
                 }"
                 :style="{ 
-                  width: `${CELL_WIDTH}px`,
+                  width: `${dynamicCellWidth}px`,
                   height: `${ROW_HEIGHT}px`
                 }"
                 @click="handleCellClick(employee, date)"
@@ -189,7 +191,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useEmployeeStore } from '~/stores/employees'
 import type { Employee, Absence } from '~/types'
 import { 
@@ -256,6 +258,16 @@ const scrollTop = ref(0)
 const isLoading = ref(true)
 const currentDate = ref(new Date()) // For week/month navigation
 
+// Cache management for month data
+interface CachedMonthData {
+  dates: Date[]
+  employees: Employee[]
+  lastUpdated: number
+}
+
+const monthDataCache = ref<Map<string, CachedMonthData>>(new Map())
+const isLoadingBackgroundData = ref(false)
+
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
 
@@ -264,6 +276,12 @@ const displayDates = computed(() => {
     case 'weekView':
       return getCurrentWeekDates(currentDate.value)
     case 'monthView':
+      // Use cached data if available, otherwise generate fresh
+      const cacheKey = getCacheKey(currentDate.value.getFullYear(), currentDate.value.getMonth())
+      const cachedData = monthDataCache.value.get(cacheKey)
+      if (cachedData && isCacheValid(cachedData)) {
+        return cachedData.dates
+      }
       return getDatesInMonth(currentDate.value.getFullYear(), currentDate.value.getMonth())
     default:
       return getCurrentWeekDates(currentDate.value)
@@ -284,15 +302,24 @@ const employeeVisibleRange = computed(() =>
   )
 )
 
-const dateVisibleRange = computed(() =>
-  calculateHorizontalVisibleRange(
+const dateVisibleRange = computed(() => {
+  // For month view, show all dates without horizontal scrolling
+  if (props.viewType === 'monthView') {
+    return {
+      startIndex: 0,
+      endIndex: yearDates.value.length - 1
+    }
+  }
+  
+  // For week view, keep horizontal scrolling if needed
+  return calculateHorizontalVisibleRange(
     scrollLeft.value,
     containerRef.value?.clientWidth || 800,
     CELL_WIDTH,
     yearDates.value.length,
     30
   )
-)
+})
 
 // Visible data
 const visibleEmployees = computed(() => 
@@ -302,16 +329,55 @@ const visibleEmployees = computed(() =>
   )
 )
 
-const visibleDates = computed(() =>
-  yearDates.value.slice(
+const visibleDates = computed(() => {
+  // For month view, show all dates
+  if (props.viewType === 'monthView') {
+    return yearDates.value
+  }
+  
+  // For week view, use virtual scrolling
+  return yearDates.value.slice(
     dateVisibleRange.value.startIndex,
     dateVisibleRange.value.endIndex + 1
   )
-)
+})
 
 // Calculate total dimensions
 const totalEmployeeHeight = computed(() => employees.value.length * ROW_HEIGHT)
-const totalDateWidth = computed(() => yearDates.value.length * CELL_WIDTH)
+const totalDateWidth = computed(() => {
+  if (props.viewType === 'monthView') {
+    // Calculate width to fit container without horizontal scroll
+    const containerWidth = containerRef.value?.clientWidth || 800
+    const availableWidth = containerWidth - EMPLOYEE_COLUMNS_WIDTH
+    return Math.max(availableWidth, yearDates.value.length * CELL_WIDTH)
+  }
+  return yearDates.value.length * CELL_WIDTH
+})
+
+// Calculate dynamic cell width for month view
+const dynamicCellWidth = computed(() => {
+  if (props.viewType === 'monthView') {
+    const containerWidth = containerRef.value?.clientWidth || 800
+    const availableWidth = containerWidth - EMPLOYEE_COLUMNS_WIDTH
+    return Math.max(CELL_WIDTH, Math.floor(availableWidth / yearDates.value.length))
+  }
+  return CELL_WIDTH
+})
+
+// Watchers
+watch(() => props.viewType, (newViewType) => {
+  if (newViewType === 'monthView') {
+    // Reset scroll position and preload adjacent months
+    scrollLeft.value = 0
+    nextTick(() => preloadAdjacentMonths())
+  }
+})
+
+watch(currentDate, () => {
+  if (props.viewType === 'monthView') {
+    nextTick(() => preloadAdjacentMonths())
+  }
+})
 
 // Group dates by month for headers
 const visibleMonths = computed(() => {
@@ -365,13 +431,22 @@ const getAbsenceForDate = (employeeId: string, date: Date): Absence | null => {
  */
 const handleScroll = throttle((event: Event) => {
   const target = event.target as HTMLElement
-  scrollLeft.value = target.scrollLeft
-  scrollTop.value = target.scrollTop
   
-  // Sync horizontal scroll with date headers
-  if (dateHeadersRef.value) {
-    dateHeadersRef.value.scrollLeft = target.scrollLeft
+  // Only handle horizontal scroll for week view
+  if (props.viewType === 'weekView') {
+    scrollLeft.value = target.scrollLeft
+    
+    // Sync horizontal scroll with date headers
+    if (dateHeadersRef.value) {
+      dateHeadersRef.value.scrollLeft = target.scrollLeft
+    }
+  } else {
+    // For month view, prevent horizontal scrolling
+    target.scrollLeft = 0
+    scrollLeft.value = 0
   }
+  
+  scrollTop.value = target.scrollTop
 }, 16) // ~60fps
 
 /**
@@ -424,6 +499,11 @@ const navigatePrevious = () => {
     newDate.setMonth(newDate.getMonth() - 1)
   }
   currentDate.value = newDate
+  
+  // Preload adjacent months for month view
+  if (props.viewType === 'monthView') {
+    nextTick(() => preloadAdjacentMonths())
+  }
 }
 
 /**
@@ -437,6 +517,11 @@ const navigateNext = () => {
     newDate.setMonth(newDate.getMonth() + 1)
   }
   currentDate.value = newDate
+  
+  // Preload adjacent months for month view
+  if (props.viewType === 'monthView') {
+    nextTick(() => preloadAdjacentMonths())
+  }
 }
 
 /**
@@ -444,6 +529,85 @@ const navigateNext = () => {
  */
 const navigateToday = () => {
   currentDate.value = new Date()
+}
+
+// Cache management functions
+/**
+ * Generate cache key for a specific month
+ */
+const getCacheKey = (year: number, month: number): string => {
+  return `${year}-${month.toString().padStart(2, '0')}`
+}
+
+/**
+ * Check if cached data is still valid (within 5 minutes)
+ */
+const isCacheValid = (cachedData: CachedMonthData): boolean => {
+  const fiveMinutes = 5 * 60 * 1000
+  return Date.now() - cachedData.lastUpdated < fiveMinutes
+}
+
+/**
+ * Cache month data
+ */
+const cacheMonthData = (year: number, month: number, dates: Date[], employees: Employee[]) => {
+  const cacheKey = getCacheKey(year, month)
+  monthDataCache.value.set(cacheKey, {
+    dates,
+    employees,
+    lastUpdated: Date.now()
+  })
+}
+
+/**
+ * Load month data in background
+ */
+const loadMonthDataInBackground = async (year: number, month: number) => {
+  const cacheKey = getCacheKey(year, month)
+  
+  // Skip if already cached and valid
+  const existingCache = monthDataCache.value.get(cacheKey)
+  if (existingCache && isCacheValid(existingCache)) {
+    return
+  }
+
+  isLoadingBackgroundData.value = true
+  
+  try {
+    // Generate dates for the month
+    const dates = getDatesInMonth(year, month)
+    
+    // Get employees data (in a real app, this might be a filtered API call)
+    const employees = employeeStore.getAllEmployees
+    
+    // Cache the data
+    cacheMonthData(year, month, dates, employees)
+    
+  } catch (error) {
+    console.error('Failed to load background data:', error)
+  } finally {
+    isLoadingBackgroundData.value = false
+  }
+}
+
+/**
+ * Preload next and previous months
+ */
+const preloadAdjacentMonths = () => {
+  if (props.viewType !== 'monthView') return
+  
+  const currentYear = currentDate.value.getFullYear()
+  const currentMonth = currentDate.value.getMonth()
+  
+  // Load next month
+  const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1
+  const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear
+  loadMonthDataInBackground(nextYear, nextMonth)
+  
+  // Load previous month
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+  loadMonthDataInBackground(prevYear, prevMonth)
 }
 
 /**
@@ -483,7 +647,13 @@ const scrollToToday = () => {
 onMounted(async () => {
   await initialize()
   await nextTick()
-  scrollToToday()
+  
+  if (props.viewType === 'weekView') {
+    scrollToToday()
+  } else {
+    // For month view, preload adjacent months
+    preloadAdjacentMonths()
+  }
 })
 
 onUnmounted(() => {
@@ -737,6 +907,24 @@ defineExpose({
 
 .absence-cell.today {
   box-shadow: inset 0 0 0 2px #1976d2;
+}
+
+/* Month view specific styles */
+.date-headers.month-view {
+  overflow: visible;
+}
+
+.absence-cells.month-view {
+  overflow: visible;
+}
+
+/* Prevent horizontal scrolling in month view */
+.calendar-body {
+  overflow-x: hidden;
+}
+
+.calendar-body:not(.week-view) {
+  overflow-x: hidden !important;
 }
 
 /* Tooltip styling */
