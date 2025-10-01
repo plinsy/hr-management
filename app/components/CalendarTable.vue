@@ -17,7 +17,7 @@
         <div class="employee-columns">
           <div class="employee-header-cell name-cell">First Name</div>
           <div class="employee-header-cell name-cell">Last Name</div>
-          <div class="employee-header-cell personnel-cell">Personnel #</div>
+          <div class="employee-header-cell phone-cell">Phone Number</div>
         </div>
         
         <!-- Scrollable date headers -->
@@ -93,7 +93,7 @@
             <div class="employee-info">
               <div class="employee-cell name-cell">{{ employee.firstName }}</div>
               <div class="employee-cell name-cell">{{ employee.lastName }}</div>
-              <div class="employee-cell personnel-cell">{{ employee.personnelNumber }}</div>
+              <div class="employee-cell phone-cell">{{ employee.phoneNumber }}</div>
             </div>
 
             <!-- Absence cells -->
@@ -173,7 +173,7 @@ import {
 // Constants for sizing
 const ROW_HEIGHT = 40
 const CELL_WIDTH = 40
-const EMPLOYEE_COLUMNS_WIDTH = 300 // Width for name and personnel number columns
+const EMPLOYEE_COLUMNS_WIDTH = 380 // Width for name and phone number columns
 const HEADER_HEIGHT = 80
 
 // Props
@@ -426,7 +426,7 @@ defineExpose({
   display: flex;
   background-color: #f5f5f5;
   border-right: 2px solid #e0e0e0;
-  width: 300px;
+  width: 380px;
 }
 
 .employee-header-cell {
@@ -445,8 +445,8 @@ defineExpose({
   width: 120px;
 }
 
-.personnel-cell {
-  width: 100px;
+.phone-cell {
+  width: 140px;
 }
 
 /* Date headers */
@@ -542,7 +542,7 @@ defineExpose({
   display: flex;
   background-color: #fafafa;
   border-right: 2px solid #e0e0e0;
-  width: 300px;
+  width: 380px;
 }
 
 .employee-cell {
@@ -603,30 +603,31 @@ defineExpose({
 @media (max-width: 960px) {
   .employee-columns,
   .employee-info {
-    width: 250px;
+    width: 340px;
   }
   
   .name-cell {
     width: 100px;
   }
   
-  .personnel-cell {
-    width: 80px;
+  .phone-cell {
+    width: 120px;
   }
 }
 
 @media (max-width: 600px) {
   .employee-columns,
   .employee-info {
-    width: 200px;
+    width: 260px;
   }
   
   .name-cell {
     width: 80px;
   }
   
-  .personnel-cell {
-    width: 70px;
+  .phone-cell {
+    width: 100px;
+    font-size: 0.7rem;
   }
   
   .employee-cell,

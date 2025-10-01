@@ -22,6 +22,9 @@ describe('dataGenerator', () => {
         expect(employee.personnelNumber).toBeDefined()
         expect(typeof employee.personnelNumber).toBe('string')
         expect(employee.personnelNumber).toMatch(/^EMP\d{4}$/)
+        expect(employee.phoneNumber).toBeDefined()
+        expect(typeof employee.phoneNumber).toBe('string')
+        expect(employee.phoneNumber).toMatch(/^\(\d{3}\) \d{3}-\d{4}$/)
         expect(Array.isArray(employee.absences)).toBe(true)
       })
     })
@@ -32,6 +35,14 @@ describe('dataGenerator', () => {
       const uniqueNumbers = new Set(personnelNumbers)
       
       expect(uniqueNumbers.size).toBe(personnelNumbers.length)
+    })
+
+    it('should generate unique phone numbers', () => {
+      const employees = generateEmployeeData(20)
+      const phoneNumbers = employees.map(emp => emp.phoneNumber)
+      const uniquePhones = new Set(phoneNumbers)
+      
+      expect(uniquePhones.size).toBe(phoneNumbers.length)
     })
 
     it('should generate default number of employees when no count provided', () => {

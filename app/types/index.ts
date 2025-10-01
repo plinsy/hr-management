@@ -11,6 +11,8 @@ export interface Employee {
   lastName: string;
   /** Unique personnel number */
   personnelNumber: string;
+  /** Employee's phone number */
+  phoneNumber: string;
   /** List of absence records for this employee */
   absences: Absence[];
 }

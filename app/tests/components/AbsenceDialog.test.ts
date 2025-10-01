@@ -12,6 +12,7 @@ const mockEmployee: Employee = {
   firstName: 'John',
   lastName: 'Doe',
   personnelNumber: 'EMP0001',
+  phoneNumber: '(555) 123-4567',
   absences: []
 }
 

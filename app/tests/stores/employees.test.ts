@@ -11,6 +11,7 @@ vi.mock('~/utils/dataGenerator', () => ({
       firstName: 'John',
       lastName: 'Doe',
       personnelNumber: 'EMP0001',
+      phoneNumber: '(555) 123-4567',
       absences: [
         {
           id: 'abs1',
@@ -29,6 +30,7 @@ vi.mock('~/utils/dataGenerator', () => ({
       firstName: 'Jane',
       lastName: 'Smith',
       personnelNumber: 'EMP0002',
+      phoneNumber: '(555) 987-6543',
       absences: []
     }
   ])
@@ -210,7 +212,8 @@ describe('employeeStore', () => {
         const employeeData = {
           firstName: 'Bob',
           lastName: 'Johnson',
-          personnelNumber: 'EMP0003'
+          personnelNumber: 'EMP0003',
+          phoneNumber: '(555) 111-2222'
         }
 
         const newEmployee = await store.addEmployee(employeeData)
@@ -218,6 +221,7 @@ describe('employeeStore', () => {
         expect(newEmployee.firstName).toBe('Bob')
         expect(newEmployee.lastName).toBe('Johnson')
         expect(newEmployee.personnelNumber).toBe('EMP0003')
+        expect(newEmployee.phoneNumber).toBe('(555) 111-2222')
         expect(newEmployee.absences).toEqual([])
         expect(newEmployee.id).toBeDefined()
 
