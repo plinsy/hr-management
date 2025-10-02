@@ -6,12 +6,24 @@ import { generateEmployeeData } from '~/utils/dataGenerator'
  * Employee store state interface
  */
 interface EmployeeState {
-  /** List of all employees */
+  /** List of loaded employees */
   employees: Employee[]
+  /** All employees data (simulated backend) */
+  allEmployeesData: Employee[]
   /** Loading state */
   isLoading: boolean
+  /** Loading more employees state */
+  isLoadingMore: boolean
   /** Error message if any */
   error: string | null
+  /** Current page for pagination */
+  currentPage: number
+  /** Items per page */
+  itemsPerPage: number
+  /** Total count of employees */
+  totalCount: number
+  /** Has more data to load */
+  hasMore: boolean
 }
 
 /**
@@ -21,15 +33,36 @@ interface EmployeeState {
 export const useEmployeeStore = defineStore('employees', {
   state: (): EmployeeState => ({
     employees: [],
+    allEmployeesData: [],
     isLoading: false,
-    error: null
+    isLoadingMore: false,
+    error: null,
+    currentPage: 0,
+    itemsPerPage: 20,
+    totalCount: 0,
+    hasMore: true
   }),
 
   getters: {
     /**
-     * Get all employees with their absences
+     * Get all loaded employees with their absences
      */
     getAllEmployees: (state) => state.employees,
+
+    /**
+     * Get total employees count
+     */
+    getTotalEmployees: (state) => state.totalCount,
+
+    /**
+     * Check if more employees can be loaded
+     */
+    getHasMore: (state) => state.hasMore,
+
+    /**
+     * Check if currently loading more employees
+     */
+    getIsLoadingMore: (state) => state.isLoadingMore,
 
     /**
      * Get employee by ID
@@ -99,10 +132,7 @@ export const useEmployeeStore = defineStore('employees', {
         )
       },
 
-    /**
-     * Get total number of employees
-     */
-    getTotalEmployees: (state) => state.employees.length,
+
 
     /**
      * Get employee full name
@@ -117,7 +147,7 @@ export const useEmployeeStore = defineStore('employees', {
 
   actions: {
     /**
-     * Initialize employee data
+     * Initialize employee data with pagination
      * In a real application, this would fetch from GraphQL endpoint
      */
     async initializeData() {
@@ -128,14 +158,83 @@ export const useEmployeeStore = defineStore('employees', {
         // Simulate API delay
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
-        // Generate sample data
-        this.employees = generateEmployeeData(50) // Generate 50 employees for testing
+        // Generate all sample data (simulating backend)
+        this.allEmployeesData = generateEmployeeData(100) // Generate 100 employees total
+        this.totalCount = this.allEmployeesData.length
+        
+        // Reset pagination
+        this.currentPage = 0
+        this.employees = []
+        this.hasMore = true
+
+        // Load first page
+        await this.loadMoreEmployees()
       } catch (error) {
         this.error = 'Failed to load employee data'
         console.error('Error initializing employee data:', error)
       } finally {
         this.isLoading = false
       }
+    },
+
+    /**
+     * Load more employees (pagination)
+     */
+    async loadMoreEmployees() {
+      if (!this.hasMore || this.isLoadingMore) return
+
+      this.isLoadingMore = true
+      this.error = null
+
+      try {
+        // Simulate API delay
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        const startIndex = this.currentPage * this.itemsPerPage
+        const endIndex = startIndex + this.itemsPerPage
+        
+        console.log('Loading employees:', { 
+          currentPage: this.currentPage, 
+          startIndex, 
+          endIndex, 
+          totalData: this.allEmployeesData.length,
+          currentLoaded: this.employees.length
+        })
+        
+        const newEmployees = this.allEmployeesData.slice(startIndex, endIndex)
+        
+        console.log('New employees loaded:', newEmployees.length)
+        
+        // Add new employees to the loaded list
+        this.employees.push(...newEmployees)
+        
+        // Update pagination state
+        this.currentPage++
+        this.hasMore = this.employees.length < this.totalCount
+
+        console.log('Updated state:', {
+          totalLoaded: this.employees.length,
+          totalCount: this.totalCount,
+          hasMore: this.hasMore,
+          nextPage: this.currentPage
+        })
+
+      } catch (error) {
+        this.error = 'Failed to load more employees'
+        console.error('Error loading more employees:', error)
+      } finally {
+        this.isLoadingMore = false
+      }
+    },
+
+    /**
+     * Reset and reload employees
+     */
+    async reloadEmployees() {
+      this.employees = []
+      this.currentPage = 0
+      this.hasMore = true
+      await this.loadMoreEmployees()
     },
 
     /**

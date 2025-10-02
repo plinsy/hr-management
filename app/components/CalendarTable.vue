@@ -89,8 +89,10 @@
           <!-- Year View Headers -->
           <div v-else-if="viewType === 'yearView'" class="date-headers year-view">
             <div class="year-month-headers">
-              <div v-for="monthData in yearViewData" :key="`header-${monthData.year}-${monthData.month}`"
-                class="year-month-header" @click="navigateToMonth(monthData.year, monthData.month)">
+              <div v-for="monthData in yearViewData" :key="`header-${monthData.year}-${monthData.month}`" :style="{
+                minWidth: `${yearMonthCellWidth}px`,
+                maxWidth: `${yearMonthCellWidth}px`,
+              }" class="year-month-header" @click="navigateToMonth(monthData.year, monthData.month)">
                 <div class="month-name">{{ monthData.shortName }}</div>
                 <div class="month-year">{{ monthData.year }}</div>
               </div>
@@ -99,9 +101,13 @@
         </div>
       </div>
 
-      <!-- Scrollable body -->
-      <div class="calendar-body" ref="calendarBodyRef" @scroll="handleScroll"
-        :style="{ height: `${containerHeight}px` }">
+      <!-- Scrollable body with infinite scroll -->
+      <v-infinite-scroll
+        class="calendar-body"
+        ref="calendarBodyRef"
+        :height="containerHeight"
+        @load="onInfiniteLoad"
+      >
         <!-- Year View -->
         <div v-if="viewType === 'yearView'" class="year-view-content">
           <div class="virtual-content" :style="{
@@ -129,17 +135,20 @@
                     'has-absences': getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0,
                     'no-absences': getMonthAbsenceCount(employee.id, monthData.year, monthData.month) === 0
                   }" :style="{
-                    width: `${yearMonthCellWidth}px`,
+                    minWidth: `${yearMonthCellWidth}px`,
+                    maxWidth: `${yearMonthCellWidth}px`,
                     height: `${ROW_HEIGHT}px`
                   }" @click="handleMonthCellClick(employee, monthData.year, monthData.month)">
 
                   <!-- Absence count display -->
-                  <span v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0" class="absence-count-display">
+                  <span v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0"
+                    class="absence-count-display">
                     {{ getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 9 ? '9+' : getMonthAbsenceCount(employee.id, monthData.year, monthData.month) }}
                   </span>
 
                   <!-- Tooltip for month absences -->
-                  <v-tooltip v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0" activator="parent" location="top">
+                  <v-tooltip v-if="getMonthAbsenceCount(employee.id, monthData.year, monthData.month) > 0"
+                    activator="parent" location="top">
                     <div class="month-absence-tooltip">
                       <div class="tooltip-header">
                         <strong>{{ employee.firstName }} {{ employee.lastName }}</strong>
@@ -147,10 +156,10 @@
                       <div class="tooltip-month">{{ monthData.name }} {{ monthData.year }}</div>
                       <div class="tooltip-divider"></div>
                       <div class="absence-list">
-                        <div v-for="absence in getEmployeeMonthAbsences(employee.id, monthData.year, monthData.month)" 
-                             :key="absence.id" class="absence-item">
+                        <div v-for="absence in getEmployeeMonthAbsences(employee.id, monthData.year, monthData.month)"
+                          :key="absence.id" class="absence-item">
                           <div class="absence-dates">
-                            {{ formatDate(new Date(absence.startDate), 'short') }} - 
+                            {{ formatDate(new Date(absence.startDate), 'short') }} -
                             {{ formatDate(new Date(absence.endDate), 'short') }}
                           </div>
                           <div class="absence-type">{{ absence.type }}</div>
@@ -216,7 +225,23 @@
             </div>
           </div>
         </div>
-      </div>
+
+        <!-- Loading more indicator -->
+        <template v-if="employeeStore.getIsLoadingMore" #loading>
+          <div class="loading-more-indicator">
+            <v-progress-circular size="24" width="3" color="primary" indeterminate />
+            <span class="loading-text">Loading more employees...</span>
+          </div>
+        </template>
+
+        <!-- End of list indicator -->
+        <template v-if="!employeeStore.getHasMore" #empty>
+          <div class="end-of-list-indicator">
+            <v-icon color="grey" size="small">mdi-check-circle</v-icon>
+            <span class="end-text">All employees loaded ({{ employees.length }} total)</span>
+          </div>
+        </template>
+      </v-infinite-scroll>
     </div>
   </div>
 </template>
@@ -239,8 +264,7 @@ import {
 } from '~/utils/dateUtils'
 import {
   calculateVisibleRange,
-  calculateHorizontalVisibleRange,
-  throttle
+  calculateHorizontalVisibleRange
 } from '~/utils/virtualScrolling'
 
 /**
@@ -474,6 +498,8 @@ watch(currentDate, (newDate) => {
   }
 })
 
+// Employee count watcher removed to prevent infinite scroll loop
+
 // Group dates by month for headers
 const visibleMonths = computed(() => {
   const months: Array<{
@@ -522,17 +548,43 @@ const getAbsenceForDate = (employeeId: string, date: Date): Absence | null => {
 }
 
 /**
- * Handle scroll events with throttling
+ * Handle infinite scroll load event from Vuetify
  */
-const handleScroll = throttle((event: Event) => {
-  const target = event.target as HTMLElement
+const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok' | 'empty' | 'error') => void }) => {
+  try {
+    console.log('Vuetify infinite scroll triggered - loading more employees...', {
+      currentCount: employeeStore.getAllEmployees.length,
+      totalCount: employeeStore.getTotalEmployees,
+      hasMore: employeeStore.getHasMore,
+      side
+    })
 
-  // Prevent horizontal scrolling
-  target.scrollLeft = 0
-  scrollLeft.value = 0
+    if (!employeeStore.getHasMore) {
+      done('empty')
+      return
+    }
 
-  scrollTop.value = target.scrollTop
-}, 16) // ~60fps
+    await employeeStore.loadMoreEmployees()
+    
+    console.log('After loading more employees:', {
+      newCount: employeeStore.getAllEmployees.length,
+      totalCount: employeeStore.getTotalEmployees,
+      hasMore: employeeStore.getHasMore
+    })
+
+    // Tell Vuetify infinite scroll the status
+    if (employeeStore.getHasMore) {
+      done('ok')
+    } else {
+      done('empty')
+    }
+  } catch (error) {
+    console.error('Failed to load more employees:', error)
+    done('error')
+  }
+}
+
+// checkScrollPosition function removed to prevent infinite scroll loop
 
 /**
  * Handle cell click events
@@ -559,7 +611,7 @@ const getMonthAbsenceCount = (employeeId: string, year: number, month: number): 
   employee.absences.forEach(absence => {
     const startDate = new Date(absence.startDate)
     const endDate = new Date(absence.endDate)
-    
+
     // Check if absence overlaps with this month
     if (startDate <= monthEnd && endDate >= monthStart) {
       count++
@@ -582,7 +634,7 @@ const getEmployeeMonthAbsences = (employeeId: string, year: number, month: numbe
   return employee.absences.filter(absence => {
     const startDate = new Date(absence.startDate)
     const endDate = new Date(absence.endDate)
-    
+
     // Check if absence overlaps with this month
     return startDate <= monthEnd && endDate >= monthStart
   })
@@ -1276,7 +1328,9 @@ defineExpose({
   font-style: italic;
   color: #888;
   font-size: 0.8rem;
-}/* Tooltip styling */
+}
+
+/* Tooltip styling */
 .absence-tooltip {
   font-size: 0.875rem;
   line-height: 1.4;
@@ -1318,7 +1372,31 @@ defineExpose({
   .employee-cell,
   .employee-header-cell {
     padding: 4px 8px;
-    font-size: 0.75rem;
   }
+}
+
+/* Loading and pagination indicators */
+.loading-more-indicator,
+.end-of-list-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+}
+
+.loading-text,
+.end-text {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.end-text {
+  color: #28a745;
 }
 </style>
