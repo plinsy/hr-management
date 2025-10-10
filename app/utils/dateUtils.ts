@@ -1,5 +1,5 @@
 /**
- * Date utility functions for the HR management application
+ * Date utility functions for the HRStream application
  */
 
 /**

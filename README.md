@@ -1,8 +1,8 @@
-# HR Management System
+# HRStream
 
-A modern, responsive HR management system built with **Vue.js 3**, **Nuxt 3**, and **Vuetify** for tracking employee absences with an intuitive year-view calendar interface featuring virtual scrolling for optimal performance.
+A modern, real-time HR management platform built with **Vue.js 3**, **Nuxt 3**, and **Vuetify** for seamless employee absence tracking. Experience fluid workflows with an intuitive year-view calendar featuring high-performance virtual scrolling.
 
-![HR Management System](https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=flat&logo=vue.js)
+![HRStream](https://img.shields.io/badge/Vue.js-3.5-4FC08D?style=flat&logo=vue.js)
 ![Nuxt](https://img.shields.io/badge/Nuxt-3.x-00DC82?style=flat&logo=nuxt.js)
 ![Vuetify](https://img.shields.io/badge/Vuetify-3.x-1867C0?style=flat&logo=vuetify)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat&logo=typescript)
@@ -51,7 +51,7 @@ A modern, responsive HR management system built with **Vue.js 3**, **Nuxt 3**, a
 
 ### Project Structure
 ```
-hr-management/
+hrstream/
 ├── app/
 │   └── app.vue                 # Main application layout
 ├── components/
@@ -310,11 +310,8 @@ For support and questions:
 
 **Built with ❤️ using Vue.js, Nuxt, and Vuetify**
 
-*This project demonstrates modern frontend development practices with a focus on performance, usability, and maintainability.*
+*HRStream demonstrates modern frontend development practices with a focus on performance, real-time workflows, and seamless user experience.*
 
-# HR Management System 🏢
-
-A modern, responsive employee absence management application built with Vue.js, Nuxt 3, and Vuetify. This application provides an intuitive calendar interface for tracking and managing employee absences with virtual scrolling for optimal performance.
 
 ## ✨ Features
 
@@ -427,7 +424,7 @@ pnpm postinstall  # Prepare Nuxt
 ## 📁 Project Structure
 
 ```
-hr-management/
+hrstream/
 ├── app/                          # Main application directory
 │   ├── components/              # Vue components
 │   │   ├── CalendarTable.vue    # Main calendar component with virtual scrolling
@@ -601,7 +598,7 @@ pnpm test --coverage   # Generate coverage report
 
 ## 📝 License
 
-This project is created for demonstration purposes as part of a technical assessment. It showcases modern Vue.js development practices and serves as a foundation for real-world HR management applications.
+This project is created for demonstration purposes as part of a technical assessment. It showcases modern Vue.js development practices and serves as a foundation for real-world HR platforms with fluid, real-time workflows.
 
 ## 🙏 Acknowledgments
 
@@ -624,4 +621,4 @@ After running `pnpm dev`, you'll see:
 
 **Try clicking on any colored cell to create or edit an absence!**
 
-The application demonstrates a production-ready approach to building complex data visualization interfaces with Vue.js, showcasing best practices in modern web development.
+The application demonstrates a production-ready approach to building complex data visualization interfaces with Vue.js, showcasing best practices in modern web development with streamlined, real-time user experiences.

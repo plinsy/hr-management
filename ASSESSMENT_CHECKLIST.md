@@ -1,4 +1,4 @@
-# HR Management Application - Technical Assessment Checklist
+# HRStream Application - Technical Assessment Checklist
 
 ## 🚀 Project Setupv
 - [ ] Vue.js with Nuxt framework configured

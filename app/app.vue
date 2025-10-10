@@ -18,11 +18,11 @@
             class="me-3"
           >
             <v-icon :size="rail && !mobile ? 'small' : 'default'" color="white">
-              mdi-office-building
+              mdi-waves-arrow-right
             </v-icon>
           </v-avatar>
           <div v-if="!rail || mobile" class="flex-grow-1">
-            <div class="text-h6 font-weight-bold">HR System</div>
+            <div class="text-h6 font-weight-bold">HRStream</div>
             <div class="text-caption text-medium-emphasis">{{ totalEmployees }} Employees</div>
           </div>
         </div>
@@ -107,8 +107,8 @@
       />
 
       <v-app-bar-title class="d-flex align-center">
-        <span class="text-h5 font-weight-bold d-none d-sm-flex">HR Management</span>
-        <span class="text-h6 font-weight-bold d-sm-none">HR</span>
+        <span class="text-h5 font-weight-bold d-none d-sm-flex">HRStream</span>
+        <span class="text-h6 font-weight-bold d-sm-none">HRStream</span>
       </v-app-bar-title>
 
       <v-spacer />
@@ -409,7 +409,7 @@
           
           <!-- Loading text -->
           <div class="loading-text mb-4">
-            <h2 class="text-h4 font-weight-light mb-2">HR Management System</h2>
+            <h2 class="text-h4 font-weight-light mb-2">HRStream</h2>
             <p class="text-h6 text-medium-emphasis">{{ loadingMessage }}</p>
           </div>
           
@@ -451,7 +451,7 @@ import type { ViewType } from './components/CalendarTable.vue'
 import AbsenceDialog from './components/AbsenceDialog.vue'
 
 /**
- * Main application component for HR Management System
+ * Main application component for HRStream
  * Features responsive design, virtual scrolling calendar, and absence management
  */
 
@@ -471,6 +471,7 @@ const activeSection = ref('calendar')
 
 // Initialize sidebar state from localStorage
 const initializeSidebarState = () => {
+  if (typeof window === 'undefined') return
   const savedRailState = localStorage.getItem('hr-sidebar-rail')
   if (savedRailState !== null) {
     rail.value = JSON.parse(savedRailState)
@@ -479,11 +480,13 @@ const initializeSidebarState = () => {
 
 // Save sidebar state to localStorage
 const saveSidebarState = (railState: boolean) => {
+  if (typeof window === 'undefined') return
   localStorage.setItem('hr-sidebar-rail', JSON.stringify(railState))
 }
 
 // Initialize view type from localStorage
 const initializeViewType = (): ViewType => {
+  if (typeof window === 'undefined') return 'monthView'
   const savedViewType = localStorage.getItem('hr-view-type')
   if (savedViewType && (savedViewType === 'monthView' || savedViewType === 'yearView')) {
     return savedViewType as ViewType
@@ -493,6 +496,7 @@ const initializeViewType = (): ViewType => {
 
 // Save view type to localStorage
 const saveViewType = (viewTypeValue: ViewType) => {
+  if (typeof window === 'undefined') return
   localStorage.setItem('hr-view-type', viewTypeValue)
 }
 
@@ -894,11 +898,11 @@ onMounted(async () => {
 
 // Set page title
 useHead({
-  title: 'HR Management System - Employee Absence Calendar',
+  title: 'HRStream - Real-time Employee Absence Calendar',
   meta: [
     {
       name: 'description',
-      content: 'Modern HR management system for tracking employee absences with virtual scrolling calendar view'
+      content: 'Modern real-time HR platform for seamless employee absence tracking with fluid workflows and virtual scrolling calendar view'
     }
   ]
 })
