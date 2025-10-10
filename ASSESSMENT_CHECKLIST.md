@@ -1,6 +1,6 @@
 # HR Management Application - Technical Assessment Checklist
 
-## 🚀 Project Setup
+## 🚀 Project Setupv
 - [ ] Vue.js with Nuxt framework configured
 - [ ] Vuetify for UI components and design integrated
 - [ ] TypeScript configuration set up

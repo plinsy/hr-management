@@ -5,6 +5,13 @@
       <v-progress-circular :size="70" :width="7" color="primary" indeterminate />
     </v-overlay>
 
+    <!-- Notifications -->
+    <div class="notifications-container">
+      <v-alert v-for="notification in notifications" :key="notification.id" :type="notification.type"
+        :title="notification.title" :text="notification.message" :model-value="notification.visible" closable
+        class="notification-alert" @click:close="dismissNotification(notification.id)" />
+    </div>
+
     <!-- Calendar content -->
     <div v-if="!isLoading" class="calendar-content">
       <!-- View controls header -->
@@ -102,12 +109,8 @@
       </div>
 
       <!-- Scrollable body with infinite scroll -->
-      <v-infinite-scroll
-        class="calendar-body"
-        ref="calendarBodyRef"
-        :height="containerHeight"
-        @load="onInfiniteLoad"
-      >
+      <v-infinite-scroll class="calendar-body" ref="calendarBodyRef" :height="containerHeight" @load="onInfiniteLoad"
+        side="end">
         <!-- Year View -->
         <div v-if="viewType === 'yearView'" class="year-view-content">
           <div class="virtual-content" :style="{
@@ -227,19 +230,19 @@
         </div>
 
         <!-- Loading more indicator -->
-        <template v-if="employeeStore.getIsLoadingMore" #loading>
+        <!-- <template v-if="employeeStore.getIsLoadingMore" #loading>
           <div class="loading-more-indicator">
             <v-progress-circular size="24" width="3" color="primary" indeterminate />
             <span class="loading-text">Loading more employees...</span>
           </div>
-        </template>
+        </template> -->
 
         <!-- End of list indicator -->
         <template v-if="!employeeStore.getHasMore" #empty>
-          <div class="end-of-list-indicator">
+          <!-- <div class="end-of-list-indicator">
             <v-icon color="grey" size="small">mdi-check-circle</v-icon>
             <span class="end-text">All employees loaded ({{ employees.length }} total)</span>
-          </div>
+          </div> -->
         </template>
       </v-infinite-scroll>
     </div>
@@ -314,6 +317,16 @@ const scrollTop = ref(0)
 const isLoading = ref(true)
 const currentDate = ref(new Date()) // For week/month navigation
 
+// Notification state
+const notifications = ref<Array<{
+  id: number
+  type: 'success' | 'error' | 'warning' | 'info'
+  title: string
+  message: string
+  visible: boolean
+}>>([])
+let notificationId = 0
+
 // Cache management for month data
 interface CachedMonthData {
   dates: Date[]
@@ -330,6 +343,9 @@ const selectedDateForPicker = ref(new Date())
 
 // Reactive container width for responsive calculations
 const containerWidth = ref(800)
+
+// Store scroll event handler reference for cleanup
+const scrollHandler = ref<((event: Event) => void) | null>(null)
 
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
@@ -498,7 +514,121 @@ watch(currentDate, (newDate) => {
   }
 })
 
-// Employee count watcher removed to prevent infinite scroll loop
+// Watch for employee changes to ensure proper reactivity
+watch(() => employees.value, (newEmployees, oldEmployees) => {
+  const newLength = newEmployees?.length || 0
+  const oldLength = oldEmployees?.length || 0
+
+  if (newLength > oldLength) {
+    console.log('🔄 Employee array updated:', {
+      oldLength,
+      newLength,
+      difference: newLength - oldLength
+    })
+
+    // Force a re-computation of visible employees when new ones are loaded
+    nextTick(() => {
+      const newVisibleRange = employeeVisibleRange.value
+      const newVisibleEmployees = visibleEmployees.value
+
+      console.log('📊 Reactivity update complete:', {
+        oldLength,
+        newLength,
+        visibleRange: newVisibleRange,
+        visibleEmployeesCount: newVisibleEmployees.length,
+        totalHeight: totalEmployeeHeight.value,
+        scrollTop: scrollTop.value
+      })
+
+      // Force DOM update by triggering a style recalculation
+      if (calendarBodyRef.value) {
+        let scrollElement: HTMLElement | null = null
+
+        // Handle Vue component instance vs HTMLElement
+        if ('$el' in calendarBodyRef.value) {
+          scrollElement = calendarBodyRef.value.$el as HTMLElement
+        } else {
+          scrollElement = calendarBodyRef.value as HTMLElement
+        }
+
+        if (scrollElement && scrollElement.style) {
+          // Trigger a layout recalculation to ensure virtual scrolling updates
+          const currentTransform = scrollElement.style.transform
+          scrollElement.style.transform = 'translateZ(0)'
+
+          // Force a reflow
+          void scrollElement.offsetHeight
+
+          nextTick(() => {
+            scrollElement!.style.transform = currentTransform
+
+            // Double-check that the visible employees updated
+            const finalVisibleEmployees = visibleEmployees.value
+            console.log('✅ Final visible employees count:', finalVisibleEmployees.length)
+          })
+        }
+      }
+    })
+  }
+}, { deep: true, flush: 'post' })
+
+// Watch for scroll position changes to debug virtual scrolling
+watch([scrollTop, () => employees.value.length], ([newScrollTop, newEmployeeCount], [oldScrollTop, oldEmployeeCount]) => {
+  if (newEmployeeCount !== oldEmployeeCount || Math.abs(newScrollTop - oldScrollTop) > 10) {
+    console.log('Virtual scrolling state:', {
+      scrollTop: newScrollTop,
+      employeeCount: newEmployeeCount,
+      visibleRange: employeeVisibleRange.value,
+      visibleEmployees: visibleEmployees.value.length,
+      totalHeight: totalEmployeeHeight.value
+    })
+  }
+}, { flush: 'post' })
+
+// Fallback manual infinite scroll detection
+const checkManualInfiniteScroll = () => {
+  if (calendarBodyRef.value && employeeStore.getHasMore && !employeeStore.getIsLoadingMore) {
+    let scrollElement: HTMLElement | null = null
+
+    // Handle Vue component instance vs HTMLElement
+    if ('$el' in calendarBodyRef.value) {
+      scrollElement = calendarBodyRef.value.$el as HTMLElement
+    } else {
+      scrollElement = calendarBodyRef.value as HTMLElement
+    }
+
+    if (scrollElement) {
+      const scrollTop = scrollElement.scrollTop || 0
+      const scrollHeight = scrollElement.scrollHeight || 0
+      const clientHeight = scrollElement.clientHeight || props.containerHeight
+
+      // Check if we're near the bottom (within 100px)
+      if (scrollHeight - (scrollTop + clientHeight) < 100) {
+        console.log('Manual infinite scroll trigger detected:', {
+          scrollTop,
+          scrollHeight,
+          clientHeight,
+          remaining: scrollHeight - (scrollTop + clientHeight)
+        })
+
+        // Manually trigger loading more employees
+        onInfiniteLoad({
+          side: 'end',
+          done: (status) => console.log('Manual load done:', status)
+        })
+      }
+    }
+  }
+}
+
+// Debounced version for scroll events
+const debouncedManualCheck = (() => {
+  let timeout: NodeJS.Timeout
+  return () => {
+    clearTimeout(timeout)
+    timeout = setTimeout(checkManualInfiniteScroll, 150)
+  }
+})()
 
 // Group dates by month for headers
 const visibleMonths = computed(() => {
@@ -541,6 +671,39 @@ const visibleMonths = computed(() => {
 
 // Methods
 /**
+ * Show notification
+ */
+const showNotification = (type: 'success' | 'error' | 'warning' | 'info', title: string, message: string) => {
+  const id = ++notificationId
+  notifications.value.push({
+    id,
+    type,
+    title,
+    message,
+    visible: true
+  })
+
+  // Auto-dismiss after 5 seconds
+  setTimeout(() => {
+    dismissNotification(id)
+  }, 5000)
+}
+
+/**
+ * Dismiss notification
+ */
+const dismissNotification = (id: number) => {
+  const index = notifications.value.findIndex(n => n.id === id)
+  if (index !== -1) {
+    notifications.value[index]!.visible = false
+    // Remove from array after animation
+    setTimeout(() => {
+      notifications.value.splice(index, 1)
+    }, 300)
+  }
+}
+
+/**
  * Get absence for a specific employee and date
  */
 const getAbsenceForDate = (employeeId: string, date: Date): Absence | null => {
@@ -552,34 +715,79 @@ const getAbsenceForDate = (employeeId: string, date: Date): Absence | null => {
  */
 const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok' | 'empty' | 'error') => void }) => {
   try {
-    console.log('Vuetify infinite scroll triggered - loading more employees...', {
-      currentCount: employeeStore.getAllEmployees.length,
-      totalCount: employeeStore.getTotalEmployees,
-      hasMore: employeeStore.getHasMore,
-      side
-    })
+    const previousCount = employeeStore.getAllEmployees.length
 
     if (!employeeStore.getHasMore) {
+      // showNotification('info', 'All Loaded', 'All employees have been loaded')
       done('empty')
       return
     }
 
     await employeeStore.loadMoreEmployees()
-    
-    console.log('After loading more employees:', {
-      newCount: employeeStore.getAllEmployees.length,
-      totalCount: employeeStore.getTotalEmployees,
-      hasMore: employeeStore.getHasMore
-    })
+
+    const newCount = employeeStore.getAllEmployees.length
+    const loadedCount = newCount - previousCount
+
+    if (loadedCount > 0) {
+      // Force reactivity update by triggering multiple re-renders
+      await nextTick()
+
+      // Get current scroll position from the actual DOM element
+      let currentScrollTop = scrollTop.value
+      if (calendarBodyRef.value) {
+        let scrollElement: HTMLElement | null = null
+
+        // Handle Vue component instance vs HTMLElement
+        if ('$el' in calendarBodyRef.value) {
+          scrollElement = calendarBodyRef.value.$el as HTMLElement
+        } else {
+          scrollElement = calendarBodyRef.value as HTMLElement
+        }
+
+        if (scrollElement && scrollElement.scrollTop !== undefined) {
+          currentScrollTop = scrollElement.scrollTop
+          scrollTop.value = currentScrollTop // Sync our ref
+        }
+      }
+
+      // Check if user is at bottom and can see the new employees
+      const totalHeight = newCount * ROW_HEIGHT
+      const isNearBottom = currentScrollTop + props.containerHeight >= totalHeight - (ROW_HEIGHT * 15)
+
+      console.log('Infinite scroll - employees loaded:', {
+        previousCount,
+        newCount,
+        loadedCount,
+        currentScrollTop,
+        containerHeight: props.containerHeight,
+        totalHeight,
+        isNearBottom,
+        visibleRange: employeeVisibleRange.value,
+        visibleEmployeesCount: visibleEmployees.value.length
+      })
+
+      // if (isNearBottom) {
+      //   // User can see the new employees
+      //   showNotification('success', 'Employees Loaded', `Loaded ${loadedCount} more employees (${newCount} total)`)
+      // } else {
+      //   // User needs to scroll down to see new employees  
+      //   showNotification('info', 'New Employees Available', `${loadedCount} more employees loaded. Scroll down to view them.`)
+      // }
+
+      // Force another reactivity update
+      await nextTick()
+    }
 
     // Tell Vuetify infinite scroll the status
     if (employeeStore.getHasMore) {
       done('ok')
     } else {
+      // showNotification('info', 'Complete', 'All employees have been loaded')
       done('empty')
     }
   } catch (error) {
     console.error('Failed to load more employees:', error)
+    showNotification('error', 'Loading Failed', 'Failed to load more employees. Please try again.')
     done('error')
   }
 }
@@ -592,8 +800,13 @@ const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok
 const handleCellClick = (employee: Employee, date: Date) => {
   const absence = getAbsenceForDate(employee.id, date)
   if (!absence) {
-    throw new Error(`Cell not found ${employee.id} - ${date.toISOString()}`)
+    showNotification('info', 'No Absence', `${employee.firstName} ${employee.lastName} is present on ${formatDate(date, 'short')}`)
+    return
   }
+
+  showNotification('info', 'Absence Details',
+    `${employee.firstName} ${employee.lastName} - ${absence.type} on ${formatDate(date, 'short')}${absence.reason ? `: ${absence.reason}` : ''}`)
+
   emit('cellClick', employee, date, absence)
 }
 
@@ -645,8 +858,15 @@ const getEmployeeMonthAbsences = (employeeId: string, year: number, month: numbe
  */
 const handleMonthCellClick = (employee: Employee, year: number, month: number) => {
   // Navigate to month view for this specific month
+  const monthName = getMonthName(new Date(year, month, 1))
+  const absenceCount = getMonthAbsenceCount(employee.id, year, month)
+
   currentDate.value = new Date(year, month, 1)
   selectedDateForPicker.value = new Date(year, month, 1)
+
+  showNotification('info', 'View Changed',
+    `Switched to ${monthName} ${year} view for ${employee.firstName} ${employee.lastName}${absenceCount > 0 ? ` (${absenceCount} absences)` : ''}`)
+
   emit('update:viewType', 'monthView')
 }
 
@@ -836,9 +1056,11 @@ const initialize = async () => {
     // Load employee data if not already loaded
     if (employees.value.length === 0) {
       await employeeStore.initializeData()
+      // showNotification('success', 'Calendar Loaded', `Successfully loaded ${employeeStore.getAllEmployees.length} employees`)
     }
   } catch (error) {
     console.error('Failed to initialize calendar:', error)
+    showNotification('error', 'Loading Failed', 'Failed to initialize calendar data. Please refresh the page.')
   } finally {
     isLoading.value = false
   }
@@ -856,6 +1078,49 @@ const scrollToToday = () => {
   if (todayIndex !== -1 && calendarBodyRef.value) {
     const scrollPosition = Math.max(0, todayIndex * CELL_WIDTH - 200)
     calendarBodyRef.value.scrollLeft = scrollPosition
+  }
+}
+
+/**
+ * Scroll to the bottom to see newly loaded employees
+ */
+const scrollToBottom = () => {
+  if (calendarBodyRef.value) {
+    let scrollContainer: HTMLElement | null = null
+
+    // Handle Vue component instance vs HTMLElement
+    if ('$el' in calendarBodyRef.value) {
+      scrollContainer = calendarBodyRef.value.$el as HTMLElement
+    } else {
+      scrollContainer = calendarBodyRef.value as HTMLElement
+    }
+
+    // For v-infinite-scroll, find the actual scrollable element
+    if (scrollContainer && scrollContainer.querySelector) {
+      const scrollableChild = scrollContainer.querySelector('.v-infinite-scroll__side') ||
+        scrollContainer.querySelector('[data-infinite-scroll]') ||
+        scrollContainer.firstElementChild
+      if (scrollableChild) {
+        scrollContainer = scrollableChild as HTMLElement
+      }
+    }
+
+    if (scrollContainer) {
+      // Try both scrollTo and direct scrollTop assignment
+      if (scrollContainer.scrollTo) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior: 'smooth'
+        })
+      } else {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight
+      }
+
+      // Update our ref to match
+      nextTick(() => {
+        scrollTop.value = scrollContainer.scrollTop || 0
+      })
+    }
   }
 }
 
@@ -882,6 +1147,64 @@ onMounted(async () => {
     resizeObserver.observe(containerRef.value)
   }
 
+  // Set up scroll event listener for v-infinite-scroll
+  await nextTick() // Ensure component is fully mounted
+
+  if (calendarBodyRef.value) {
+    // Try different ways to get the scroll container
+    let scrollElement: HTMLElement | null = null
+
+    // Handle Vue component instance vs HTMLElement
+    if ('$el' in calendarBodyRef.value) {
+      scrollElement = calendarBodyRef.value.$el as HTMLElement
+    } else {
+      scrollElement = calendarBodyRef.value as HTMLElement
+    }
+
+    // For v-infinite-scroll, might need to find the actual scrollable element
+    if (scrollElement && scrollElement.querySelector) {
+      const scrollableChild = scrollElement.querySelector('.v-infinite-scroll__side') ||
+        scrollElement.querySelector('[data-infinite-scroll]') ||
+        scrollElement.firstElementChild
+      if (scrollableChild) {
+        scrollElement = scrollableChild as HTMLElement
+      }
+    }
+
+    if (scrollElement && scrollElement.addEventListener) {
+      const handleScroll = (event: Event) => {
+        const target = event.target as HTMLElement
+        scrollTop.value = target.scrollTop || 0
+        scrollLeft.value = target.scrollLeft || 0
+
+        // Trigger manual infinite scroll check
+        debouncedManualCheck()
+
+        // Debug logging (only log occasionally to avoid spam)
+        if (Math.random() < 0.1) { // Log ~10% of scroll events
+          console.log('Scroll event:', {
+            scrollTop: scrollTop.value,
+            scrollLeft: scrollLeft.value,
+            scrollHeight: target.scrollHeight,
+            clientHeight: target.clientHeight,
+            employeeCount: employees.value.length,
+            hasMore: employeeStore.getHasMore
+          })
+        }
+      }
+
+      scrollElement.addEventListener('scroll', handleScroll, { passive: true })
+
+      // Also listen on the parent container
+      if (containerRef.value && containerRef.value !== scrollElement) {
+        containerRef.value.addEventListener('scroll', handleScroll, { passive: true })
+      }
+
+      // Store reference for cleanup
+      scrollHandler.value = handleScroll
+    }
+  }
+
   if (props.viewType === 'monthView') {
     // For month view, preload adjacent months
     preloadAdjacentMonths()
@@ -892,6 +1215,39 @@ onMounted(async () => {
 onUnmounted(() => {
   if (resizeObserver) {
     resizeObserver.disconnect()
+  }
+
+  // Clean up scroll event listener
+  if (scrollHandler.value && calendarBodyRef.value) {
+    let scrollElement: HTMLElement | null = null
+
+    // Handle Vue component instance vs HTMLElement
+    if ('$el' in calendarBodyRef.value) {
+      scrollElement = calendarBodyRef.value.$el as HTMLElement
+    } else {
+      scrollElement = calendarBodyRef.value as HTMLElement
+    }
+
+    // Find the actual scrollable element
+    if (scrollElement && scrollElement.querySelector) {
+      const scrollableChild = scrollElement.querySelector('.v-infinite-scroll__side') ||
+        scrollElement.querySelector('[data-infinite-scroll]') ||
+        scrollElement.firstElementChild
+      if (scrollableChild) {
+        scrollElement = scrollableChild as HTMLElement
+      }
+    }
+
+    if (scrollElement) {
+      scrollElement.removeEventListener('scroll', scrollHandler.value, { passive: true } as any)
+
+      // Also remove from container if it was added
+      if (containerRef.value && containerRef.value !== scrollElement) {
+        containerRef.value.removeEventListener('scroll', scrollHandler.value, { passive: true } as any)
+      }
+    }
+
+    scrollHandler.value = null
   }
 })
 
@@ -914,6 +1270,36 @@ defineExpose({
   background-color: #fff;
   display: flex;
   flex-direction: column;
+}
+
+/* Notifications styling */
+.notifications-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-alert {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* View controls styling */

@@ -388,16 +388,52 @@
         </v-card>
       </v-dialog>
 
-      <!-- Loading overlay -->
-      <v-overlay v-if="isInitializing" class="align-center justify-center">
-        <div class="text-center">
+      <!-- Enhanced Loading Screen -->
+      <v-overlay v-if="isInitializing" class="loading-overlay">
+        <div class="loading-container">
+          <!-- Logo/Icon -->
+          <div class="loading-logo mb-6">
+            <v-avatar size="80" color="primary" class="elevation-4">
+              <v-icon size="40" color="white">mdi-office-building</v-icon>
+            </v-avatar>
+          </div>
+          
+          <!-- Main loading spinner -->
           <v-progress-circular
-            :size="70"
-            :width="7"
+            :size="80"
+            :width="8"
             color="primary"
             indeterminate
+            class="mb-6"
           />
-          <div class="text-h6 mt-4">Loading HR Management System...</div>
+          
+          <!-- Loading text -->
+          <div class="loading-text mb-4">
+            <h2 class="text-h4 font-weight-light mb-2">HR Management System</h2>
+            <p class="text-h6 text-medium-emphasis">{{ loadingMessage }}</p>
+          </div>
+          
+          <!-- Loading progress indicator -->
+          <div class="loading-steps">
+            <v-progress-linear
+              :model-value="loadingProgress"
+              color="primary"
+              height="4"
+              rounded
+              class="mb-3"
+              :indeterminate="loadingProgress === 0"
+            />
+            <p class="text-caption text-medium-emphasis">
+              {{ loadingStep }}
+            </p>
+          </div>
+          
+          <!-- Loading animation dots -->
+          <div class="loading-dots mt-6">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
         </div>
       </v-overlay>
     </v-main>
@@ -433,6 +469,33 @@ const drawer = ref(!mobile.value)
 const rail = ref(false)
 const activeSection = ref('calendar')
 
+// Initialize sidebar state from localStorage
+const initializeSidebarState = () => {
+  const savedRailState = localStorage.getItem('hr-sidebar-rail')
+  if (savedRailState !== null) {
+    rail.value = JSON.parse(savedRailState)
+  }
+}
+
+// Save sidebar state to localStorage
+const saveSidebarState = (railState: boolean) => {
+  localStorage.setItem('hr-sidebar-rail', JSON.stringify(railState))
+}
+
+// Initialize view type from localStorage
+const initializeViewType = (): ViewType => {
+  const savedViewType = localStorage.getItem('hr-view-type')
+  if (savedViewType && (savedViewType === 'monthView' || savedViewType === 'yearView')) {
+    return savedViewType as ViewType
+  }
+  return 'monthView' // Default to monthView
+}
+
+// Save view type to localStorage
+const saveViewType = (viewTypeValue: ViewType) => {
+  localStorage.setItem('hr-view-type', viewTypeValue)
+}
+
 // Reactive state
 const selectedYear = ref(getCurrentYear())
 const isInitializing = ref(true)
@@ -440,7 +503,12 @@ const error = ref<string | null>(null)
 const successMessage = ref('')
 const showSuccessMessage = ref(false)
 const showStatsDialog = ref(false)
-const viewType = ref<ViewType>('yearView')
+const viewType = ref<ViewType>(initializeViewType())
+
+// Enhanced loading state
+const loadingMessage = ref('Initializing application...')
+const loadingProgress = ref(0)
+const loadingStep = ref('Setting up environment')
 
 // Employee section state
 const employeeSearch = ref('')
@@ -557,17 +625,49 @@ const filteredEmployees = computed(() => {
 
 // Methods
 /**
- * Initialize the application
+ * Initialize the application with enhanced loading feedback
  */
 const initializeApp = async () => {
   isInitializing.value = true
   error.value = null
+  loadingProgress.value = 0
   
   try {
+    // Step 1: Initialize environment
+    loadingMessage.value = 'Initializing application...'
+    loadingStep.value = 'Setting up environment'
+    loadingProgress.value = 20
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Step 2: Load configuration
+    loadingMessage.value = 'Loading configuration...'
+    loadingStep.value = 'Preparing system settings'
+    loadingProgress.value = 40
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Step 3: Initialize data store
+    loadingMessage.value = 'Loading employee data...'
+    loadingStep.value = 'Fetching employee information'
+    loadingProgress.value = 60
     await employeeStore.initializeData()
+    
+    // Step 4: Setup UI components
+    loadingMessage.value = 'Preparing interface...'
+    loadingStep.value = 'Setting up calendar and components'
+    loadingProgress.value = 80
+    await new Promise(resolve => setTimeout(resolve, 400))
+    
+    // Step 5: Finalizing
+    loadingMessage.value = 'Almost ready...'
+    loadingStep.value = 'Finalizing setup'
+    loadingProgress.value = 100
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
   } catch (err) {
     error.value = 'Failed to load employee data. Please refresh the page.'
     console.error('Initialization error:', err)
+    loadingMessage.value = 'Loading failed'
+    loadingStep.value = 'Please refresh the page'
   } finally {
     isInitializing.value = false
   }
@@ -579,7 +679,7 @@ const initializeApp = async () => {
 const refreshData = async () => {
   try {
     await employeeStore.initializeData()
-    showSuccess('Data refreshed successfully')
+    // showSuccess('Data refreshed successfully')
   } catch (err) {
     error.value = 'Failed to refresh data. Please try again.'
   }
@@ -768,8 +868,21 @@ watch(mobile, (newVal) => {
   }
 }, { immediate: true })
 
+// Watch rail state and persist to localStorage
+watch(rail, (newVal) => {
+  saveSidebarState(newVal)
+})
+
+// Watch view type and persist to localStorage
+watch(viewType, (newVal) => {
+  saveViewType(newVal)
+})
+
 // Lifecycle
 onMounted(async () => {
+  // Initialize sidebar state from localStorage
+  initializeSidebarState()
+  
   await initializeApp()
   await nextTick()
   
@@ -955,5 +1068,94 @@ useHead({
 /* Rail mode adjustments */
 .v-navigation-drawer--rail .v-list-item {
   padding-inline: 8px;
+}
+
+/* Enhanced Loading Screen Styles */
+.loading-overlay {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  backdrop-filter: blur(10px);
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.loading-logo {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.loading-text h2 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.loading-text p {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 300;
+}
+
+.loading-steps {
+  width: 100%;
+  max-width: 300px;
+}
+
+.loading-steps p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+}
+
+/* Animated loading dots */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  animation: loadingDots 1.4s infinite ease-in-out both;
+}
+
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+.dot:nth-child(3) { animation-delay: 0s; }
+
+@keyframes loadingDots {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Progress bar styling */
+:deep(.loading-steps .v-progress-linear) {
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+:deep(.loading-steps .v-progress-linear__determinate) {
+  background: linear-gradient(90deg, #4fc3f7, #29b6f6) !important;
 }
 </style>
