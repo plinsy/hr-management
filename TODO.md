@@ -20,23 +20,23 @@
 
 ## Absence Management Dialog
 - [x] Create dialog component that opens on cell click
-- [ ] Implement create new absence functionality
-- [ ] Implement edit existing absence functionality
-- [ ] Support multi-day absence spans
+- [x] Implement create new absence functionality
+- [x] Implement edit existing absence functionality
+- [x] Support multi-day absence spans
 
 ## Live Updates & Data Persistence
-- [ ] Implement immediate visual updates after absence changes
-- [ ] Persist changes in Vue state
-- [ ] Structure data for future GraphQL compatibility
-- [ ] Use initial empty or random dataset
+- [x] Implement immediate visual updates after absence changes
+- [x] Persist changes in Vue state
+- [x] Structure data for future GraphQL compatibility
+- [x] Use initial empty or random dataset
 
 ## State Management
-- [ ] Set up Vuex or Nuxt composition API for state management
-- [ ] Implement data store for employee absence data
-- [ ] Handle state updates for absence modifications
+- [x] Set up Vuex or Nuxt composition API for state management
+- [x] Implement data store for employee absence data
+- [x] Handle state updates for absence modifications
 
 ## Responsive Design & Performance
-- [ ] Apply Vuetify's responsive layout system
+- [x] Apply Vuetify's responsive layout system
 - [ ] Optimize performance for large datasets (full year + multiple employees)
 - [ ] Test on different screen sizes
 

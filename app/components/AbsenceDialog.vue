@@ -11,7 +11,7 @@
         <!-- <v-icon class="me-2" color="primary">
           {{ isEditing ? 'mdi-pencil' : 'mdi-plus' }}
         </v-icon> -->
-        {{ isEditing ? 'Edit Absence' : 'Add an absence' }}
+        {{ isEditing ? 'Edit absence' : 'Add an absence' }}
       </v-card-title>
 
       <v-divider />
@@ -181,7 +181,7 @@
 
       <!-- Dialog actions -->
       <v-card-actions class="pa-4">
-        <v-spacer />
+        <!-- <v-spacer /> -->
         
         <!-- Delete button for editing -->
         <v-btn
@@ -191,7 +191,7 @@
           @click="handleDelete"
           :loading="isDeleting"
         >
-          <v-icon start>mdi-delete</v-icon>
+          <!-- <v-icon start>mdi-delete</v-icon> -->
           Delete
         </v-btn>
 
