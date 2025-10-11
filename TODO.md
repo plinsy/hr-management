@@ -9,9 +9,9 @@
 
 ## Core Table Implementation
 - [x] Create employee absence table component
-- [ ] Implement X-axis: First name, Last name, Personnel number, Dates (full year)
+- [x] Implement X-axis: First name, Last name, Personnel number, Dates (full year)
 - [x] Implement Y-axis: Employees list
-- [ ] Add virtual scrolling (horizontal & vertical)
+- [x] Add virtual scrolling (horizontal & vertical)
 
 ## Cell Color System
 - [x] Red cells for employee absences
@@ -37,13 +37,13 @@
 
 ## Responsive Design & Performance
 - [x] Apply Vuetify's responsive layout system
-- [ ] Optimize performance for large datasets (full year + multiple employees)
-- [ ] Test on different screen sizes
+- [x] Optimize performance for large datasets (full year + multiple employees)
+- [x] Test on different screen sizes
 
 ## Code Structure & Modularity
-- [ ] Create separate components for table, dialog, and data handling
-- [ ] Ensure modular and reusable code structure
-- [ ] Follow best practices for component organization
+- [x] Create separate components for table, dialog, and data handling
+- [x] Ensure modular and reusable code structure
+- [x] Follow best practices for component organization
 
 ## Bonus Features
 - [x] Add tooltips for better UX
@@ -52,10 +52,10 @@
 - [ ] Additional UI/UX improvements
 
 ## Final Deliverables
-- [ ] Ensure project runs locally (`npm install` → `npm run dev`)
+- [x] Ensure project runs locally (`npm install` → `npm run dev`)
 - [ ] Test all functionality thoroughly
-- [ ] Prepare zipped folder for submission
-- [ ] Create GitHub repository
+- [x] Prepare zipped folder for submission
+- [x] Create GitHub repository
 - [ ] Submit to laura.cancino@notfaroff.com
 
 ## Testing & Quality Assurance
