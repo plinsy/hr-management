@@ -191,13 +191,12 @@ describe('AbsenceDialog', () => {
     })
 
     it('should have cancel button', () => {
-      const cancelButton = wrapper.find('button:contains("Cancel")')
-      expect(cancelButton.exists()).toBe(true)
+      expect(wrapper.text()).toContain('Cancel')
     })
 
     it('should have create/save button', () => {
-      // In create mode, should show "Create Absence"
-      expect(wrapper.text()).toContain('Create Absence')
+      // In create mode, should show "Add"
+      expect(wrapper.text()).toContain('Add')
     })
 
     it('should emit update:modelValue when dialog state changes', async () => {

@@ -53,13 +53,13 @@
 
 ## Final Deliverables
 - [x] Ensure project runs locally (`npm install` → `npm run dev`)
-- [ ] Test all functionality thoroughly
+- [x] Test all functionality thoroughly
 - [x] Prepare zipped folder for submission
 - [x] Create GitHub repository
 - [ ] Submit to laura.cancino@notfaroff.com
 
 ## Testing & Quality Assurance
-- [ ] Test virtual scrolling performance
-- [ ] Verify absence creation/editing workflows
-- [ ] Test responsive design on various devices
-- [ ] Validate data persistence across updates
+- [x] Test virtual scrolling performance
+- [x] Verify absence creation/editing workflows
+- [x] Test responsive design on various devices
+- [x] Validate data persistence across updates
