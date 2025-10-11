@@ -40,7 +40,7 @@
           @click="activeSection = 'calendar'"
         />
         
-        <v-list-item
+        <!-- <v-list-item
           prepend-icon="mdi-account-group"
           title="Employees"
           value="employees"
@@ -59,13 +59,13 @@
           title="Settings"
           value="settings"
           @click="activeSection = 'settings'"
-        />
+        /> -->
       </v-list>
 
       <v-divider class="my-2" />
 
       <!-- Quick Actions -->
-      <v-list density="compact">
+      <!-- <v-list density="compact">
         <v-list-subheader v-if="!rail || mobile">Quick Actions</v-list-subheader>
         
         <v-list-item
@@ -79,7 +79,7 @@
           title="Add Employee"
           @click="handleQuickAddEmployee"
         />
-      </v-list>
+      </v-list> -->
 
       <!-- Rail toggle button -->
       <template v-slot:append v-if="!mobile">
@@ -114,7 +114,7 @@
       <v-spacer />
 
       <!-- Year selector -->
-      <v-select
+      <!-- <v-select
         v-model="selectedYear"
         :items="availableYears"
         label="Year"
@@ -123,7 +123,7 @@
         hide-details
         class="year-selector me-4 d-none d-md-flex"
         style="max-width: 120px;"
-      />
+      /> -->
 
       <!-- Actions -->
       <div class="d-flex align-center ga-2">

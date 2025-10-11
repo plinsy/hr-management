@@ -24,11 +24,6 @@
           </v-btn-toggle>
         </div>
 
-        <div class="date-navigation">
-          <v-btn @click="navigatePrevious" icon="mdi-chevron-left" size="small" variant="outlined" />
-          <v-btn @click="navigateNext" icon="mdi-chevron-right" size="small" variant="outlined" />
-        </div>
-
         <!-- <div class="current-period">
           <h3>{{ currentPeriodLabel }}</h3>
         </div> -->
@@ -56,6 +51,11 @@
               </v-card-text>
             </v-card>
           </v-menu>
+
+          <div class="date-navigation">
+            <v-btn @click="navigatePrevious" icon="mdi-chevron-left" size="small" variant="outlined" />
+            <v-btn @click="navigateNext" icon="mdi-chevron-right" size="small" variant="outlined" />
+          </div>
         </div>
       </div>
 
@@ -787,7 +787,7 @@ const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok
     }
   } catch (error) {
     console.error('Failed to load more employees:', error)
-    showNotification('error', 'Loading Failed', 'Failed to load more employees. Please try again.')
+    // showNotification('error', 'Loading Failed', 'Failed to load more employees. Please try again.')
     done('error')
   }
 }
@@ -799,7 +799,7 @@ const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok
  */
 const handleCellClick = (employee: Employee, date: Date) => {
   const absence = getAbsenceForDate(employee.id, date)
-  
+
   // Emit event with employee, date, and absence (if exists)
   // This will open the dialog for either create (no absence) or update (with absence)
   emit('cellClick', employee, date, absence)
@@ -859,8 +859,8 @@ const handleMonthCellClick = (employee: Employee, year: number, month: number) =
   currentDate.value = new Date(year, month, 1)
   selectedDateForPicker.value = new Date(year, month, 1)
 
-  showNotification('info', 'View Changed',
-    `Switched to ${monthName} ${year} view for ${employee.firstName} ${employee.lastName}${absenceCount > 0 ? ` (${absenceCount} absences)` : ''}`)
+  // showNotification('info', 'View Changed',
+  //   `Switched to ${monthName} ${year} view for ${employee.firstName} ${employee.lastName}${absenceCount > 0 ? ` (${absenceCount} absences)` : ''}`)
 
   emit('update:viewType', 'monthView')
 }
@@ -1055,7 +1055,7 @@ const initialize = async () => {
     }
   } catch (error) {
     console.error('Failed to initialize calendar:', error)
-    showNotification('error', 'Loading Failed', 'Failed to initialize calendar data. Please refresh the page.')
+    // showNotification('error', 'Loading Failed', 'Failed to initialize calendar data. Please refresh the page.')
   } finally {
     isLoading.value = false
   }
@@ -1345,6 +1345,7 @@ defineExpose({
 .date-picker-controls {
   display: flex;
   align-items: center;
+  justify-content: end;
   gap: 12px;
 }
 
