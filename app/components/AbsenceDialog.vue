@@ -8,17 +8,17 @@
     <v-card>
       <!-- Dialog header -->
       <v-card-title class="text-h5 pa-4">
-        <v-icon class="me-2" color="primary">
+        <!-- <v-icon class="me-2" color="primary">
           {{ isEditing ? 'mdi-pencil' : 'mdi-plus' }}
-        </v-icon>
-        {{ isEditing ? 'Edit Absence' : 'Create New Absence' }}
+        </v-icon> -->
+        {{ isEditing ? 'Edit Absence' : 'Add an absence' }}
       </v-card-title>
 
       <v-divider />
 
       <!-- Dialog content -->
       <v-card-text class="pa-4">
-        <!-- Employee info -->
+        <!-- Employee info or selector -->
         <div v-if="dialogState.employee" class="employee-info mb-4">
           <v-chip
             color="primary"
@@ -30,6 +30,45 @@
             {{ dialogState.employee.firstName }} {{ dialogState.employee.lastName }}
             ({{ dialogState.employee.personnelNumber }})
           </v-chip>
+        </div>
+        
+        <!-- Employee selector when no employee is selected -->
+        <div v-else class="mb-4">
+          <v-autocomplete
+            v-model="selectedEmployeeId"
+            :items="allEmployees"
+            item-title="fullName"
+            item-value="id"
+            label="Select Employee"
+            variant="outlined"
+            :rules="employeeRules"
+            required
+            prepend-inner-icon="mdi-account-search"
+            clearable
+            placeholder="Search by name or personnel number..."
+          >
+            <template #item="{ props, item }">
+              <v-list-item
+                v-bind="props"
+                :title="`${item.raw.firstName} ${item.raw.lastName}`"
+                :subtitle="`Personnel #: ${item.raw.personnelNumber}`"
+              >
+                <template #prepend>
+                  <v-avatar color="primary" size="32">
+                    <span class="text-white text-caption">
+                      {{ item.raw.firstName[0] }}{{ item.raw.lastName[0] }}
+                    </span>
+                  </v-avatar>
+                </template>
+              </v-list-item>
+            </template>
+            <template #chip="{ item }">
+              <v-chip color="primary" variant="tonal">
+                <v-icon start>mdi-account</v-icon>
+                {{ item.raw.firstName }} {{ item.raw.lastName }}
+              </v-chip>
+            </template>
+          </v-autocomplete>
         </div>
 
         <!-- Form -->
@@ -176,8 +215,8 @@
           :loading="isSubmitting"
           :disabled="!formValid"
         >
-          <v-icon start>{{ isEditing ? 'mdi-content-save' : 'mdi-plus' }}</v-icon>
-          {{ isEditing ? 'Save Changes' : 'Create Absence' }}
+          <!-- <v-icon start>{{ isEditing ? 'mdi-content-save' : 'mdi-plus' }}</v-icon> -->
+          {{ isEditing ? 'Save Changes' : 'Add' }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -242,6 +281,7 @@ const isSubmitting = ref(false)
 const isDeleting = ref(false)
 const showDeleteConfirmation = ref(false)
 const validationErrors = ref<string[]>([])
+const selectedEmployeeId = ref<string | null>(null)
 
 // Computed
 const dialogState = computed({
@@ -250,6 +290,25 @@ const dialogState = computed({
 })
 
 const isEditing = computed(() => !!dialogState.value.editingAbsence)
+
+// Get all employees for the search dropdown
+const allEmployees = computed(() => {
+  return employeeStore.getAllEmployees.map(emp => ({
+    ...emp,
+    fullName: `${emp.firstName} ${emp.lastName} (${emp.personnelNumber})`
+  }))
+})
+
+// Get the currently selected employee (either from dialog state or from dropdown)
+const currentEmployee = computed(() => {
+  if (dialogState.value.employee) {
+    return dialogState.value.employee
+  }
+  if (selectedEmployeeId.value) {
+    return employeeStore.getEmployeeById(selectedEmployeeId.value)
+  }
+  return null
+})
 
 // Form data
 const formData = ref<AbsenceFormData>({
@@ -276,6 +335,10 @@ const absenceTypes = [
 ]
 
 // Validation rules
+const employeeRules = [
+  (v: string) => !!v || 'Employee is required'
+]
+
 const startDateRules = [
   (v: string) => !!v || 'Start date is required',
   (v: string) => {
@@ -284,6 +347,12 @@ const startDateRules = [
     const min = new Date(minDate)
     const max = new Date(maxDate)
     return date >= min && date <= max || `Date must be within ${currentYear}`
+  },
+  (v: string) => {
+    if (!v || !formData.value.endDate) return true
+    const startDate = new Date(v)
+    const endDate = new Date(formData.value.endDate)
+    return startDate <= endDate || 'Start date must be before or equal to end date'
   }
 ]
 
@@ -293,7 +362,7 @@ const endDateRules = [
     if (!v || !formData.value.startDate) return true
     const endDate = new Date(v)
     const startDate = new Date(formData.value.startDate)
-    return endDate >= startDate || 'End date must be after start date'
+    return endDate >= startDate || 'End date must be after or equal to start date'
   },
   (v: string) => {
     if (!v) return true
@@ -338,6 +407,11 @@ const calculateDuration = (): number => {
 const initializeForm = () => {
   validationErrors.value = []
   
+  // Reset employee selection if no employee provided
+  if (!dialogState.value.employee) {
+    selectedEmployeeId.value = null
+  }
+  
   if (isEditing.value && dialogState.value.editingAbsence) {
     // Populate form with existing absence data
     const absence = dialogState.value.editingAbsence
@@ -367,6 +441,11 @@ const initializeForm = () => {
 const validateForm = (): boolean => {
   validationErrors.value = []
   
+  // Check if employee is selected
+  if (!currentEmployee.value) {
+    validationErrors.value.push('Please select an employee')
+  }
+  
   if (!formData.value.startDate) {
     validationErrors.value.push('Start date is required')
   }
@@ -380,12 +459,12 @@ const validateForm = (): boolean => {
     const endDate = new Date(formData.value.endDate)
     
     if (endDate < startDate) {
-      validationErrors.value.push('End date must be after start date')
+      validationErrors.value.push('End date must be after or equal to start date')
     }
     
     // Check for overlapping absences
-    if (dialogState.value.employee) {
-      const overlappingAbsence = dialogState.value.employee.absences.find(absence => {
+    if (currentEmployee.value) {
+      const overlappingAbsence = currentEmployee.value.absences.find(absence => {
         // Skip the current absence if editing
         if (isEditing.value && absence.id === dialogState.value.editingAbsence?.id) {
           return false
@@ -424,7 +503,10 @@ const handleSubmit = async () => {
   const { valid } = await formRef.value.validate()
   if (!valid || !validateForm()) return
   
-  if (!dialogState.value.employee) return
+  if (!currentEmployee.value) {
+    validationErrors.value.push('Please select an employee')
+    return
+  }
   
   isSubmitting.value = true
   
@@ -441,7 +523,7 @@ const handleSubmit = async () => {
     } else {
       // Create new absence
       result = await employeeStore.createAbsence(
-        dialogState.value.employee.id,
+        currentEmployee.value.id,
         formData.value
       )
       emit('absenceCreated', result)
@@ -512,6 +594,9 @@ const handleClose = () => {
     reason: ''
   }
   
+  // Reset employee selection
+  selectedEmployeeId.value = null
+  
   validationErrors.value = []
   formValid.value = false
   
@@ -537,6 +622,24 @@ watch(
   (newStartDate) => {
     if (!isEditing.value && newStartDate && !formData.value.endDate) {
       formData.value.endDate = newStartDate
+    }
+    // Trigger validation of end date when start date changes
+    if (formRef.value) {
+      nextTick(() => {
+        formRef.value.validate()
+      })
+    }
+  }
+)
+
+// Trigger validation when end date changes
+watch(
+  () => formData.value.endDate,
+  () => {
+    if (formRef.value) {
+      nextTick(() => {
+        formRef.value.validate()
+      })
     }
   }
 )

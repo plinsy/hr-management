@@ -299,7 +299,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // Emits
 const emit = defineEmits<{
-  cellClick: [employee: Employee, date: Date, absence?: Absence]
+  cellClick: [employee: Employee, date: Date, absence?: Absence | null]
   'update:viewType': [viewType: ViewType]
 }>()
 
@@ -799,14 +799,9 @@ const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok
  */
 const handleCellClick = (employee: Employee, date: Date) => {
   const absence = getAbsenceForDate(employee.id, date)
-  if (!absence) {
-    showNotification('info', 'No Absence', `${employee.firstName} ${employee.lastName} is present on ${formatDate(date, 'short')}`)
-    return
-  }
-
-  showNotification('info', 'Absence Details',
-    `${employee.firstName} ${employee.lastName} - ${absence.type} on ${formatDate(date, 'short')}${absence.reason ? `: ${absence.reason}` : ''}`)
-
+  
+  // Emit event with employee, date, and absence (if exists)
+  // This will open the dialog for either create (no absence) or update (with absence)
   emit('cellClick', employee, date, absence)
 }
 
@@ -1539,7 +1534,13 @@ defineExpose({
 
 .absence-cell.weekend {
   background-color: #9e9e9e;
-  cursor: default;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.absence-cell.weekend:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .absence-cell.today {

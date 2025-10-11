@@ -175,6 +175,17 @@
           {{ successMessage }}
         </v-snackbar>
 
+        <!-- Warning messages -->
+        <v-snackbar
+          v-model="showWarningMessage"
+          :timeout="3000"
+          color="warning"
+          variant="elevated"
+        >
+          <v-icon start>mdi-alert</v-icon>
+          {{ warningMessage }}
+        </v-snackbar>
+
         <!-- Calendar container -->
         <div v-if="activeSection === 'calendar'" class="calendar-wrapper">
           <CalendarTable
@@ -506,6 +517,8 @@ const isInitializing = ref(true)
 const error = ref<string | null>(null)
 const successMessage = ref('')
 const showSuccessMessage = ref(false)
+const warningMessage = ref('')
+const showWarningMessage = ref(false)
 const showStatsDialog = ref(false)
 const viewType = ref<ViewType>(initializeViewType())
 
@@ -699,11 +712,16 @@ const scrollToToday = () => {
 /**
  * Handle calendar cell clicks
  */
-const handleCellClick = (employee: Employee, date: Date, absence?: Absence) => {
+const handleCellClick = (employee: Employee, date: Date, absence?: Absence | null) => {
   // Don't allow editing weekend cells
-  const isWeekend = date.getDay() === 0 || date.getDay() === 6
-  if (isWeekend) return
+  const isWeekendDay = date.getDay() === 0 || date.getDay() === 6
+  if (isWeekendDay) {
+    // Show user feedback that weekend cells cannot be edited
+    showWarning('Cannot create or edit absences on weekends')
+    return
+  }
   
+  // Open the absence dialog with the selected employee and date
   absenceDialogData.value = {
     isOpen: true,
     employee,
@@ -742,18 +760,23 @@ const showSuccess = (message: string) => {
 }
 
 /**
+ * Show warning message
+ */
+const showWarning = (message: string) => {
+  warningMessage.value = message
+  showWarningMessage.value = true
+}
+
+/**
  * Handle quick add absence
  */
 const handleQuickAddAbsence = () => {
-  // Use first employee and today's date as defaults
-  const employees = employeeStore.getAllEmployees
-  if (employees.length > 0) {
-    absenceDialogData.value = {
-      isOpen: true,
-      employee: employees[0]!,
-      selectedDate: new Date(),
-      editingAbsence: null
-    }
+  // Open dialog without employee pre-selected so user can search
+  absenceDialogData.value = {
+    isOpen: true,
+    employee: null,
+    selectedDate: new Date(),
+    editingAbsence: null
   }
 }
 
