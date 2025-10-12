@@ -114,13 +114,10 @@
         <!-- Year View -->
         <div v-if="viewType === 'yearView'" class="year-view-content">
           <div class="virtual-content" :style="{
-            height: `${totalEmployeeHeight}px`,
             width: `${yearViewTotalWidth}px`
           }">
-            <!-- Virtual scrolling employees for year view -->
-            <div v-for="(employee, employeeIndex) in visibleEmployees" :key="employee.id" class="employee-row" :style="{
-              position: 'absolute',
-              top: `${(employeeVisibleRange.startIndex + employeeIndex) * ROW_HEIGHT}px`,
+            <!-- Show all loaded employees (no virtual scrolling) -->
+            <div v-for="employee in visibleEmployees" :key="employee.id" class="employee-row" :style="{
               height: `${ROW_HEIGHT}px`,
               width: '100%'
             }">
@@ -180,13 +177,10 @@
         <!-- Month View -->
         <div v-else-if="viewType === 'monthView'" class="month-view-content">
           <div class="virtual-content" :style="{
-            height: `${totalEmployeeHeight}px`,
             width: `${totalDateWidth + EMPLOYEE_COLUMNS_WIDTH}px`
           }">
-            <!-- Virtual scrolling employees -->
-            <div v-for="(employee, employeeIndex) in visibleEmployees" :key="employee.id" class="employee-row" :style="{
-              position: 'absolute',
-              top: `${(employeeVisibleRange.startIndex + employeeIndex) * ROW_HEIGHT}px`,
+            <!-- Show all loaded employees (no virtual scrolling) -->
+            <div v-for="employee in visibleEmployees" :key="employee.id" class="employee-row" :style="{
               height: `${ROW_HEIGHT}px`,
               width: '100%'
             }">
@@ -266,7 +260,6 @@ import {
   getCurrentYear
 } from '~/utils/dateUtils'
 import {
-  calculateVisibleRange,
   calculateHorizontalVisibleRange
 } from '~/utils/virtualScrolling'
 
@@ -420,17 +413,7 @@ const yearViewTotalWidth = computed(() => {
   return EMPLOYEE_COLUMNS_WIDTH
 })
 
-// Virtual scrolling ranges
-const employeeVisibleRange = computed(() =>
-  calculateVisibleRange(
-    scrollTop.value,
-    props.containerHeight - HEADER_HEIGHT,
-    ROW_HEIGHT,
-    employees.value.length,
-    5
-  )
-)
-
+// Virtual scrolling ranges for dates only (not employees)
 const dateVisibleRange = computed(() => {
   // For month view, show all dates without horizontal scrolling
   if (props.viewType === 'monthView') {
@@ -450,13 +433,8 @@ const dateVisibleRange = computed(() => {
   )
 })
 
-// Visible data
-const visibleEmployees = computed(() =>
-  employees.value.slice(
-    employeeVisibleRange.value.startIndex,
-    employeeVisibleRange.value.endIndex + 1
-  )
-)
+// Visible data - show ALL loaded employees (no virtual scrolling for employees)
+const visibleEmployees = computed(() => employees.value)
 
 const visibleDates = computed(() => {
   // For month view, show all dates
@@ -526,17 +504,14 @@ watch(() => employees.value, (newEmployees, oldEmployees) => {
       difference: newLength - oldLength
     })
 
-    // Force a re-computation of visible employees when new ones are loaded
+    // Force a re-computation when new employees are loaded
     nextTick(() => {
-      const newVisibleRange = employeeVisibleRange.value
       const newVisibleEmployees = visibleEmployees.value
 
       console.log('📊 Reactivity update complete:', {
         oldLength,
         newLength,
-        visibleRange: newVisibleRange,
         visibleEmployeesCount: newVisibleEmployees.length,
-        totalHeight: totalEmployeeHeight.value,
         scrollTop: scrollTop.value
       })
 
@@ -552,7 +527,7 @@ watch(() => employees.value, (newEmployees, oldEmployees) => {
         }
 
         if (scrollElement && scrollElement.style) {
-          // Trigger a layout recalculation to ensure virtual scrolling updates
+          // Trigger a layout recalculation
           const currentTransform = scrollElement.style.transform
           scrollElement.style.transform = 'translateZ(0)'
 
@@ -572,15 +547,13 @@ watch(() => employees.value, (newEmployees, oldEmployees) => {
   }
 }, { deep: true, flush: 'post' })
 
-// Watch for scroll position changes to debug virtual scrolling
+// Watch for scroll position changes
 watch([scrollTop, () => employees.value.length], ([newScrollTop, newEmployeeCount], [oldScrollTop, oldEmployeeCount]) => {
   if (newEmployeeCount !== oldEmployeeCount || Math.abs(newScrollTop - oldScrollTop) > 10) {
-    console.log('Virtual scrolling state:', {
+    console.log('Scroll state:', {
       scrollTop: newScrollTop,
       employeeCount: newEmployeeCount,
-      visibleRange: employeeVisibleRange.value,
-      visibleEmployees: visibleEmployees.value.length,
-      totalHeight: totalEmployeeHeight.value
+      visibleEmployees: visibleEmployees.value.length
     })
   }
 }, { flush: 'post' })
@@ -762,7 +735,6 @@ const onInfiniteLoad = async ({ side, done }: { side: string; done: (status: 'ok
         containerHeight: props.containerHeight,
         totalHeight,
         isNearBottom,
-        visibleRange: employeeVisibleRange.value,
         visibleEmployeesCount: visibleEmployees.value.length
       })
 
