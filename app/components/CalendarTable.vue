@@ -14,47 +14,63 @@
 
     <!-- Calendar content -->
     <div v-if="!isLoading" class="calendar-content">
-      <!-- View controls header -->
-      <div class="view-controls">
-        <div class="view-selector">
-          <v-btn-toggle :model-value="props.viewType" @update:model-value="$emit('update:viewType', $event)"
-            color="primary" density="compact" variant="outlined">
-            <v-btn value="yearView" size="small">Year View</v-btn>
-            <v-btn value="monthView" size="small">Month View</v-btn>
-          </v-btn-toggle>
+
+      <div class="actions">
+
+        <!-- Search bar section -->
+        <div class="search-section">
+          <v-text-field v-model="searchQuery" density="compact" variant="outlined"
+            placeholder="Search by first name, last name, or phone number..." prepend-inner-icon="mdi-magnify" clearable
+            hide-details class="search-input" />
+          <div v-if="searchQuery" class="search-results-info">
+            <span class="results-count">
+              {{ visibleEmployees.length }} of {{ employees.length }} employee{{ employees.length !== 1 ? 's' : '' }}
+            </span>
+          </div>
         </div>
 
-        <!-- <div class="current-period">
+        <!-- View controls header -->
+        <div class="view-controls">
+          <div class="view-selector">
+            <v-btn-toggle :model-value="props.viewType" @update:model-value="$emit('update:viewType', $event)"
+              color="primary" density="compact" variant="outlined">
+              <v-btn value="yearView" size="small">Year View</v-btn>
+              <v-btn value="monthView" size="small">Month View</v-btn>
+            </v-btn-toggle>
+          </div>
+
+          <!-- <div class="current-period">
           <h3>{{ currentPeriodLabel }}</h3>
         </div> -->
-      </div>
+        </div>
 
-      <!-- Date picker and Today button section -->
-      <div class="date-picker-section">
-        <div class="date-picker-controls">
-          <v-btn @click="navigateToday" prepend-icon="mdi-calendar-today" size="small" variant="outlined"
-            color="primary">
-            Today
-          </v-btn>
+        <!-- Date picker and Today button section -->
+        <div class="date-picker-section">
+          <div class="date-picker-controls">
+            <v-btn @click="navigateToday" prepend-icon="mdi-calendar-today" size="small" variant="outlined"
+              color="primary">
+              Today
+            </v-btn>
 
-          <v-menu v-model="showDatePicker" :close-on-content-click="false" location="bottom start">
-            <template v-slot:activator="{ props: menuProps }">
-              <v-btn v-bind="menuProps" prepend-icon="mdi-calendar" size="small" variant="outlined">
-                {{ formattedSelectedDate }}
-              </v-btn>
-            </template>
+            <v-menu v-model="showDatePicker" :close-on-content-click="false" location="bottom start">
+              <template v-slot:activator="{ props: menuProps }">
+                <v-btn v-bind="menuProps" prepend-icon="mdi-calendar" size="small" variant="outlined">
+                  {{ formattedSelectedDate }}
+                </v-btn>
+              </template>
 
-            <v-card>
-              <v-card-text>
-                <v-date-picker v-model="selectedDateForPicker" @update:model-value="handleDatePickerChange" hide-header
-                  show-adjacent-months color="primary" />
-              </v-card-text>
-            </v-card>
-          </v-menu>
+              <v-card>
+                <v-card-text>
+                  <v-date-picker v-model="selectedDateForPicker" @update:model-value="handleDatePickerChange"
+                    hide-header show-adjacent-months color="primary" />
+                </v-card-text>
+              </v-card>
+            </v-menu>
 
-          <div class="date-navigation">
-            <v-btn @click="navigatePrevious" icon="mdi-chevron-left" size="small" variant="outlined" />
-            <v-btn @click="navigateNext" icon="mdi-chevron-right" size="small" variant="outlined" />
+            <div class="date-navigation">
+              <v-btn @click="navigatePrevious" icon="mdi-chevron-left" size="small" variant="outlined" />
+              <v-btn @click="navigateNext" icon="mdi-chevron-right" size="small" variant="outlined" />
+            </div>
           </div>
         </div>
       </div>
@@ -337,6 +353,9 @@ const selectedDateForPicker = ref(new Date())
 // Reactive container width for responsive calculations
 const containerWidth = ref(800)
 
+// Search state
+const searchQuery = ref('')
+
 // Store scroll event handler reference for cleanup
 const scrollHandler = ref<((event: Event) => void) | null>(null)
 
@@ -434,7 +453,24 @@ const dateVisibleRange = computed(() => {
 })
 
 // Visible data - show ALL loaded employees (no virtual scrolling for employees)
-const visibleEmployees = computed(() => employees.value)
+// Filter employees based on search query
+const visibleEmployees = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim()
+
+  if (!query) {
+    return employees.value
+  }
+
+  return employees.value.filter(employee => {
+    const firstName = employee.firstName.toLowerCase()
+    const lastName = employee.lastName.toLowerCase()
+    const phoneNumber = employee.phoneNumber.toLowerCase()
+
+    return firstName.includes(query) ||
+      lastName.includes(query) ||
+      phoneNumber.includes(query)
+  })
+})
 
 const visibleDates = computed(() => {
   // For month view, show all dates
@@ -1269,6 +1305,11 @@ defineExpose({
   }
 }
 
+.actions {
+  display: flex;
+  justify-content: start;
+}
+
 /* View controls styling */
 .view-controls {
   display: flex;
@@ -1319,6 +1360,35 @@ defineExpose({
   align-items: center;
   justify-content: end;
   gap: 12px;
+}
+
+/* Search section styling */
+.search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 1;
+  flex-grow: 1;
+}
+
+.search-input {
+  max-width: 600px;
+}
+
+.search-results-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
+}
+
+.results-count {
+  font-size: 0.875rem;
+  color: #666;
+  font-weight: 500;
 }
 
 .calendar-content {
@@ -1714,6 +1784,10 @@ defineExpose({
 }
 
 @media (max-width: 600px) {
+
+  .actions {
+    flex-direction: column;
+  }
 
   .employee-columns,
   .employee-info {
