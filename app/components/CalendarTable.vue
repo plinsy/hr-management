@@ -78,9 +78,9 @@
       <!-- Fixed header with employee info columns -->
       <div v-if="viewType === 'monthView' || viewType === 'yearView'" class="fixed-header">
         <div class="employee-columns">
-          <div class="employee-header-cell name-cell">First Name</div>
-          <div class="employee-header-cell name-cell">Last Name</div>
-          <div class="employee-header-cell phone-cell">Phone Number</div>
+          <div class="employee-header-cell name-cell">First name</div>
+          <div class="employee-header-cell name-cell">Last name</div>
+          <div class="employee-header-cell phone-cell">Phone number</div>
         </div>
 
         <!-- Scrollable date headers -->
@@ -358,6 +358,7 @@ const searchQuery = ref('')
 
 // Store scroll event handler reference for cleanup
 const scrollHandler = ref<((event: Event) => void) | null>(null)
+const dateHeaderScrollHandler = ref<((event: Event) => void) | null>(null)
 
 // Computed properties
 const employees = computed(() => employeeStore.getAllEmployees)
@@ -1180,6 +1181,11 @@ onMounted(async () => {
         scrollTop.value = target.scrollTop || 0
         scrollLeft.value = target.scrollLeft || 0
 
+        // Sync horizontal scroll with date headers
+        if (dateHeadersRef.value && target.scrollLeft !== undefined) {
+          dateHeadersRef.value.scrollLeft = target.scrollLeft
+        }
+
         // Trigger manual infinite scroll check
         debouncedManualCheck()
 
@@ -1206,6 +1212,41 @@ onMounted(async () => {
       // Store reference for cleanup
       scrollHandler.value = handleScroll
     }
+  }
+
+  // Set up scroll syncing for date headers
+  if (dateHeadersRef.value) {
+    const handleDateHeaderScroll = (event: Event) => {
+      const target = event.target as HTMLElement
+      
+      // Get the calendar body scroll element
+      let scrollElement: HTMLElement | null = null
+      if (calendarBodyRef.value) {
+        if ('$el' in calendarBodyRef.value) {
+          scrollElement = calendarBodyRef.value.$el as HTMLElement
+        } else {
+          scrollElement = calendarBodyRef.value as HTMLElement
+        }
+
+        // Find the actual scrollable element
+        if (scrollElement && scrollElement.querySelector) {
+          const scrollableChild = scrollElement.querySelector('.v-infinite-scroll__side') ||
+            scrollElement.querySelector('[data-infinite-scroll]') ||
+            scrollElement.firstElementChild
+          if (scrollableChild) {
+            scrollElement = scrollableChild as HTMLElement
+          }
+        }
+      }
+
+      // Sync horizontal scroll to calendar body
+      if (scrollElement && target.scrollLeft !== undefined) {
+        scrollElement.scrollLeft = target.scrollLeft
+      }
+    }
+
+    dateHeadersRef.value.addEventListener('scroll', handleDateHeaderScroll, { passive: true })
+    dateHeaderScrollHandler.value = handleDateHeaderScroll
   }
 
   if (props.viewType === 'monthView') {
@@ -1251,6 +1292,12 @@ onUnmounted(() => {
     }
 
     scrollHandler.value = null
+  }
+
+  // Clean up date header scroll event listener
+  if (dateHeaderScrollHandler.value && dateHeadersRef.value) {
+    dateHeadersRef.value.removeEventListener('scroll', dateHeaderScrollHandler.value, { passive: true } as any)
+    dateHeaderScrollHandler.value = null
   }
 })
 
@@ -1443,8 +1490,16 @@ defineExpose({
 /* Date headers */
 .date-headers-container {
   flex: 1;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   position: relative;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.date-headers-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .date-headers {
@@ -1514,6 +1569,13 @@ defineExpose({
   background-color: #fff;
   flex: 1;
   min-height: 0;
+}
+
+/* Allow horizontal scrolling on mobile for both views */
+@media (max-width: 768px) {
+  .calendar-body {
+    overflow-x: auto !important;
+  }
 }
 
 .virtual-content {
@@ -1613,20 +1675,29 @@ defineExpose({
   width: 100%;
 }
 
-/* Prevent horizontal scrolling in month view */
-.calendar-body {
-  overflow-x: auto;
-}
+/* Prevent horizontal scrolling in month view on desktop only */
+@media (min-width: 769px) {
+  .calendar-container[data-view-type="monthView"] .calendar-body {
+    overflow-x: hidden !important;
+  }
 
-.calendar-container[data-view-type="monthView"] .calendar-body {
-  overflow-x: hidden !important;
+  .calendar-container[data-view-type="monthView"] .date-headers-container {
+    overflow-x: hidden !important;
+  }
 }
 
 /* Year view specific styles */
 .year-view-content {
   height: 100%;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: auto; /* Allow horizontal scroll on mobile */
+}
+
+/* On desktop, hide horizontal scroll for year view if content fits */
+@media (min-width: 769px) {
+  .year-view-content {
+    overflow-x: hidden;
+  }
 }
 
 /* Year view headers */
@@ -1806,6 +1877,24 @@ defineExpose({
   .employee-cell,
   .employee-header-cell {
     padding: 4px 8px;
+  }
+
+  /* Ensure date cells have minimum width on mobile */
+  .date-header-cell,
+  .absence-cell {
+    min-width: 40px !important;
+  }
+
+  /* Ensure year view month cells have minimum width on mobile */
+  .year-month-header,
+  .year-month-cell {
+    min-width: 60px !important;
+  }
+
+  /* Allow content to overflow and enable horizontal scroll */
+  .date-headers,
+  .absence-cells {
+    overflow: visible;
   }
 }
 
